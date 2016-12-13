@@ -5,23 +5,24 @@
  * @param {object} entity JSON describing a lock
  */
 function Entity (entity) {
-    if(!entity) {
-        entity = { type : "any" };
-    }
-
     /** Identifier specifying the type of this entity 
      * @member {Entity.Type}
      */
     this.type = null;
-    
-    if(!entity.type) {
-        throw new Error("Entity: Call to entity constructor with invalid argument ("+JSON.stringify(entity)+")");
-    } else {
-        if(Entity.Types[entity.type] != undefined) {
-            this.type = entity.type;
+
+    if(entity) {
+        if(!entity.type) {
+            throw new Error("Entity: Call to entity constructor with invalid argument ("+JSON.stringify(entity)+")");
         } else {
-            throw new Error("Entity: Unknown entity type '"+entity.type+"'");
+            if(Entity.Types[entity.type] !== undefined) {
+                this.type = entity.type;
+            } else {
+                throw new Error("Entity: Unknown entity type '"+entity.type+"'");
+            }
         }
+    } else {
+        // TODO - assign the smallest entity value
+        this.type = 0;
     }
     
     if(!this.type) {
@@ -85,6 +86,8 @@ Entity.Types = Object.freeze({
     "var"    :  8,
     "msg"    :  8
 });
+
+// TODO: Put into config file and derive most general entity type!
 
 /**
  * Computes a key for this lock
