@@ -23,11 +23,10 @@ function get(id) {
         if(policyDB.hasOwnProperty(id))
             resolve(policyDB[id]);
         else
-            reject(new Error("PAP does not contain policy for entity '" + id + "'."));
+            reject(new Error("Entity '" + id + "' does not exist in PAP."));
     });
 }
 
-// TODO: store last policy valid for each subobject during looking for the property
 function getProp(id, property) {
     if(policyDB === null)
         return Promise.reject(new Error("PAP has not been initialized."));
@@ -38,10 +37,7 @@ function getProp(id, property) {
         
         if(policyDB.hasOwnProperty(id)) {
             if(!property) {
-                if(policyDB[id].self !== null)
-                    resolve(policyDB[id].self);
-                else
-                    reject(new Error("PAP does not specify policy for properties in object '" + id + "'"));
+                resolve(policyDB[id].self);
             } else {
                 var curObj = policyDB[id];
                 var effPolicy = curObj.self;
@@ -51,20 +47,13 @@ function getProp(id, property) {
                     if(curObj.properties.hasOwnProperty(n)) {
                         curObj = curObj.properties[n];
                         effPolicy = curObj.self;
-                    } else {
-                        if(effPolicy === null)
-                            reject(new Error("PAP does not specify policy for property '" + property + "' of entity '" + id + "'."));
-                        else
-                            resolve(effPolicy);
-                    }
+                    } else
+                        resolve(effPolicy);
                 }
 
-                if(curObj.self === null) {
-                    if(effPolicy === null)
-                        reject(new Error("PAP does not specify policy for property '" + property + "' of entity '" + id + "'."));
-                    else // this case should never happen but we try to also cover implementation errors
-                        resolve(effPolicy);
-                } else
+                if(curObj.self === null)
+                    resolve(effPolicy);
+                else
                     resolve(curObj.self);
             }
         } else
@@ -111,7 +100,7 @@ function setProp(id, property, policy) {
             curObj.self = policy;
         }
 
-        resolve();
+        resolve(true);
     });
 }
                 
@@ -125,27 +114,29 @@ function delProp(id, property) {
             property = false;
         
         if(policyDB.hasOwnProperty(id)) {
-            if(!property)
-                resolve(policyDB[id].self);
-            else {
+            if(!property) {
+                if(policyDB[id].self !== null) {
+                    policyDB[id].self = null;
+                    resolve(true);
+                } else
+                    resolve(false);
+            } else {
                 var curObj = policyDB[id];
                 var attrNames = property.split(".");
                 while(attrNames.length) {
                     var n = attrNames.shift();
-                    if(curObj.properties.hasOwnProperty(n)) {
+                    if(curObj.properties.hasOwnProperty(n))
                         curObj = curObj.properties[n];
-                    } else {
-                        reject(new Error("PAP does not specify policy for property '" + property + "' of entity '" + id + "'."));
-                    }
+                    else
+                        resolve(false);
                 }
 
-                // TODO: Remember last policy and indicate that
-                if(curObj.self == null)
-                    reject(new Error("PAP does not specify policy for property '" + property + "' of entity '" + id + "'."));
-                else
-                    resolve(curObj.self);
+                if(curObj.self !== null) {
+                    curObj.self = null;
+                    resolve(true);
+                }
             }
-        } else
+        } else 
             reject(new Error("Entity '" + id + "' does not exist in PAP."));
     });
 }
@@ -158,7 +149,7 @@ function getEntity(id) {
         if(policyDB.hasOwnProperty(id))
             resolve(policyDB[id].entity);
         else
-            reject(new Error("Entity '"+id+"' does not exist in PAP."));
+            reject(new Error("Entity '" + id + "' does not exist in PAP."));
     });
 }
 
@@ -173,12 +164,12 @@ function createEntity(id, policy) {
         
         if(policyDB.hasOwnProperty(id)) {
             policyDB[id].entity = policy;
-            resolve();
         } else {
             policyDB[id] = clone(emptyEntry);
             policyDB[id].entity = policy;
-            resolve();
         }
+
+        resolve(true);
     });
 }
 
@@ -189,17 +180,17 @@ function delEntity(id) {
     return new Promise(function (resolve, reject) {
         if(policyDB.hasOwnProperty(id)) {
             delete policyDB[id];
-            resolve();
+            resolve(true);
         } else {
-            reject(new Error("Entity '" + id + "' does not exist in PAP"));
+            resolve(false);
         }
     });
 }
 
 module.exports = {
     init         : init,
-    getEntity    : getEntity,
     createEntity : createEntity,
+    getEntity    : getEntity,
     delEntity    : delEntity,
     getProp      : getProp,
     get          : get,

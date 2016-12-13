@@ -25,6 +25,13 @@ module.exports = {
             "owner" : "bob!@!agile-local",
             "credentials" : [ "foo", "bar" ]
         },
+        client : {
+            "name"  : "client",
+            "id"    : "some_id_for_client",
+            "type"  : "/client",
+            "owner" : "bob!@!agile-local",
+            "credentials" : [ "foo", "bar" ]
+        },
     },
     policies : {
         // default policy for an entity if becomes an active entity, trying to interact with other entities
