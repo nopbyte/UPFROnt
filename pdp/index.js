@@ -1,5 +1,5 @@
-var Policy = require('../ulocks/Policy');
-var Context = require('../ulocks/Context');
+var Policy = require('ULocks').Policy;
+var Context = require('ULocks').Context;
 
 function valid(o) {
     return ((o !== undefined) && (o !== null));

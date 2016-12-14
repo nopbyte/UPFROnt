@@ -1,7 +1,7 @@
 var clone = require('clone');
 
 var pdp = require('../pdp');
-var Policy = require('../ulocks/Policy');
+var Policy = require('ULocks').Policy;
 
 // TODO: it should not happen that a less restrictive policy inside a subobject
 // reveals the possible confidential structure of the object containing this subobject

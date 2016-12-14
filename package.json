@@ -1,6 +1,6 @@
 {
     "name": "UPFROnt",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "ULock Policy FRamewOrk",
     "homepage": "https://github.com/SEDARI/UPFROnt/wiki",
     "license": "MIT",
@@ -20,7 +20,8 @@
         "Access Control Framework"
     ],
     "dependencies": {
-        "clone": "^2.1.0"
+        "clone": "^2.1.0",
+        "ulocks": "https://github.com/SEDARI/ulocks.git"
     },
     "optionalDependencies": {
     },

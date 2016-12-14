@@ -1,6 +1,6 @@
 var clone = require('clone');
 
-var Policy = require('../ulocks/Policy');
+var Policy = require('ULocks').Policy
 
 var policyDB = null;
 

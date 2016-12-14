@@ -1,4 +1,4 @@
-var ULocks = require("./ulocks");
+var ULocks = require("ULocks");
 
 function init(settings) {
     return ULocks.init(settings.ulocks);
