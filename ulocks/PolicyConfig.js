@@ -18,7 +18,6 @@ var lockArgTypes = {
 
 var PolicyConfig = {
     rootDir : "",
-    lockDir : "./Locks/",
 
     lockArgTypes : lockArgTypes,
 
@@ -321,6 +320,4 @@ var PolicyConfig = {
     }
 }
 
-if(global && typeof print !== "function"){
-    module.exports = PolicyConfig;
-}
+module.exports = PolicyConfig;

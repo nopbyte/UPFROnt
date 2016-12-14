@@ -37,33 +37,33 @@ module.exports = {
         // default policy for an entity if becomes an active entity, trying to interact with other entities
         defaultActor : [
             // actions of an actor are not restricted a priori
-            { target : { type: "any" } },
-            { source : { type: "any" } }
+            { target : { type: "/any" } },
+            { source : { type: "/any" } }
         ],
         // default policy for all properties of entities
         defaultEntity : [
             // all properties can be read by everyone
-            { target : { type: "any" } },
+            { target : { type: "/any" } },
             // all properties can only be changed by the owner of the entity
-            { source : { type: "user" }, locks : [ { lock : "isOwner" } ] }
+            { source : { type: "/user" }, locks : [ { lock : "isOwner" } ] }
         ],
         defaultPasswd : [
             // the property can only be read by the user itself
-            { target : { type: "user" }, locks : [ { lock : "isOwner" } ] },
+            { target : { type: "/user" }, locks : [ { lock : "isOwner" } ] },
             // the property can be set by the user itself and
-            { source : { type: "user" }, locks : [ { lock : "isOwner" } ] },
+            { source : { type: "/user" }, locks : [ { lock : "isOwner" } ] },
             // by all users with role admin
-            { source : { type: "user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] }
+            { source : { type: "/user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] }
         ],
         defaultRole : [
             // can be read by everyone 
-            { target : { type: "any" } },
+            { target : { type: "/any" } },
             // can only be changed by users with role admin
-            { source : { type: "user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] }
+            { source : { type: "/user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] }
         ],
         adminOnly : [
-            { target : { type: "user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] },
-            { source : { type: "user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] }
+            { target : { type: "/user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] },
+            { source : { type: "/user" }, locks : [ { lock : "attrEq", args : [ "role", "admin" ] } ] }
         ]
     }
 };

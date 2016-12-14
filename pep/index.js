@@ -1,3 +1,5 @@
+var clone = require('clone');
+
 var pdp = require('../pdp');
 var Policy = require('../ulocks/Policy');
 
@@ -14,14 +16,8 @@ function declassify(object, objPolicyRecord, target, targetPolicy, effPolicy) {
     } catch(e) {
         return Promise.reject(e);
     }
-        
-    
-    var objInfo = {
-        type : object.type.slice(1),
-        data : object
-    };
 
-    return declassifyRec(objInfo, object, objPolicyRecord, target, targetPolicy, effPolicy);
+    return declassifyRec(clone(object), clone(object), objPolicyRecord, target, targetPolicy, effPolicy);
 };
 
 function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effPolicy) {

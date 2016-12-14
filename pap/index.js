@@ -23,7 +23,7 @@ function get(id) {
         if(policyDB.hasOwnProperty(id))
             resolve(policyDB[id]);
         else
-            reject(new Error("Entity '" + id + "' does not exist in PAP."));
+            resolve(null);
     });
 }
 
@@ -57,7 +57,7 @@ function getProp(id, property) {
                     resolve(curObj.self);
             }
         } else
-            reject(new Error("Entity '" + id + "' does not exist in PAP."));
+            resolve(null);
     });
 }
 
@@ -71,9 +71,8 @@ function setProp(id, property, policy) {
             property = false;
         }
 
-        if(!policyDB.hasOwnProperty(id)) {
-            reject(new Error("Entity '"+id+"' does not exist in PAP. Create before specifying policies on its properties"));
-        }
+        if(!policyDB.hasOwnProperty(id))
+            resolve(false);
 
         if(!(policy instanceof Policy)) {
             policy = new Policy(policy);
@@ -137,7 +136,7 @@ function delProp(id, property) {
                 }
             }
         } else 
-            reject(new Error("Entity '" + id + "' does not exist in PAP."));
+            resolve(false);
     });
 }
 
@@ -149,7 +148,7 @@ function getEntity(id) {
         if(policyDB.hasOwnProperty(id))
             resolve(policyDB[id].entity);
         else
-            reject(new Error("Entity '" + id + "' does not exist in PAP."));
+            resolve(null);
     });
 }
 

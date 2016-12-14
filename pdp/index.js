@@ -1,7 +1,11 @@
 var Policy = require('../ulocks/Policy');
 var Context = require('../ulocks/Context');
 
-function checkRead(subjectInfo, subjectPolicy, objectInfo, objectPolicy) {
+function valid(o) {
+    return ((o !== undefined) && (o !== null));
+}
+
+function checkRead(subject, subjectPolicy, object, objectPolicy) {
     try {
         if(!(subjectPolicy instanceof Policy))
             subjectPolicy = new Policy(subjectPolicy);
@@ -11,6 +15,23 @@ function checkRead(subjectInfo, subjectPolicy, objectInfo, objectPolicy) {
     }
     catch(e) {
         return Promise.reject(e);
+    }
+
+    // TODO: check whether this type exists in Entity
+    if(!valid(subject) || !valid(subject.type))
+        return Promise.reject(new Error("PDP ERROR: Subject must specify a valid Entity type."));
+    
+    if(!valid(object) || !valid(object.type))
+        return Promise.reject(new Error("PDP ERROR: Object must specify a valid Entity type."));
+    
+    var subjectInfo = {
+        type : subject.type,
+        data : subject
+    }
+
+    var objectInfo = {
+        type : object.type,
+        data : object
     }
     
     return new Promise(function (resolve, reject) {
@@ -19,7 +40,7 @@ function checkRead(subjectInfo, subjectPolicy, objectInfo, objectPolicy) {
     });
 }
 
-function checkWrite(subjectInfo, subjectPolicy, objectInfo, objectPolicy) {
+function checkWrite(subject, subjectPolicy, object, objectPolicy) {
     try {
         if(!(subjectPolicy instanceof Policy))
             subjectPolicy = new Policy(subjectPolicy);
@@ -29,6 +50,23 @@ function checkWrite(subjectInfo, subjectPolicy, objectInfo, objectPolicy) {
     }
     catch(e) {
         return Promise.reject(e);
+    }
+
+    // TODO: check whether this type exists in Entity
+    if(!valid(subject) || !valid(subject.type))
+        return Promise.reject(new Error("PDP ERROR: Subject must specify a valid Entity type."));
+    
+    if(!valid(object) || !valid(object.type))
+        return Promise.reject(new Error("PDP ERROR: Object must specify a valid Entity type."));
+    
+    var subjectInfo = {
+        type : subject.type,
+        data : subject
+    }
+
+    var objectInfo = {
+        type : object.type,
+        data : object
     }
     
     return new Promise(function (resolve, reject) {

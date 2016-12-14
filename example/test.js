@@ -1,3 +1,4 @@
+var settings = require('./settings.js');
 var upfront = require('./../index.js');
 
 var pap = upfront.pap;
@@ -11,7 +12,19 @@ var setting = [];
 var retrieve = [];
 var deletions = [];
 
-pap.init(papDB)
+upfront.init(settings).catch(
+    function(reason) {
+        console.log("ERROR: Unable to initialize policy framework UPFROnt!");
+        if(reason) {
+            console.log(reason);
+            if(reason.stack)
+                console.log(reason.stack);
+        }
+        throw(reason);
+    })
+    .then( function () {
+        return pap.init(papDB)
+    })
     .then( function () {
         // first create entries for all entities in the PAP using the default policy which
         // may restrict the activities of an entity
@@ -104,37 +117,20 @@ pap.init(papDB)
         if(!values[10].eq(sample.policies.defaultEntity))
             return Promise.reject(new Error("default entity policy modified during creation or retrieval"));
     })
-    .catch( function(reason) {
+    .catch(function(reason) {
         if(reason && reason.stack !== undefined)
             console.log(reason.stack);
         else
             console.log("Something went wrong: "+reason);
-    });
-
-// storing and retrieval works, lets test policy decisions
-
-var userInfo = {
-    type : "user",
-    data : sample.entities.user
-};
-
-var adminInfo = {
-    type : "user",
-    data : sample.entities.admin
-};
-
-var sensorInfo = {
-    type : "sensor",
-    data : sample.entities.sensor
-};
-
-var clientInfo = {
-    type : "client",
-    data : sample.entities.client
-};
-
-// USER WRITES TO ADMIN PASSWORD
-pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.policies.defaultPasswd)
+    })
+    .then(function() {
+        // *******************************************************
+        // storing and retrieval works, lets test policy decisions
+        // *******************************************************
+        
+        // USER WRITES TO ADMIN PASSWORD
+        return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd)
+    })        
     .then(function(decision) {
         if(decision.result !== false)
             return Promise.reject(new Error("ERROR: Write from user to admin password should be forbidden but is allowed: ",decision));
@@ -142,7 +138,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from user to admin not granted");
 
         // USER READS ADMIN PASSWORD
-        return pdp.checkRead(userInfo, sample.policies.defaultEntity, adminInfo, sample.policies.defaultPasswd);
+        return pdp.checkRead(sample.entities.user, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
     })
     .then(function(decision) {
         if(decision.result !== false)
@@ -151,7 +147,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Read from user to admin password not granted");
 
         // ADMIN WRITES ITS PASSWORD
-        return pdp.checkWrite(adminInfo, sample.policies.defaultEntity, adminInfo, sample.policies.defaultPasswd);
+        return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
     })
     .then(function(decision) {
         if(decision.result !== true)
@@ -160,16 +156,17 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from admin to admin password granted");
 
         // ADMIN READS ITS PASSWORD
-        return pdp.checkRead(adminInfo, sample.policies.defaultEntity, adminInfo, sample.policies.defaultPasswd);
+        return pdp.checkRead(sample.entities.admin, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
     })
     .then(function(decision) {
-        if(decision.result !== true)
-            return Promise.reject(new Error("ERROR: Read from admin of admin password should be allowed but is forbidden: ",decision));
-        else
+        if(decision.result !== true) {
+            console.log("XXX DECISION: ", decision);
+            return Promise.reject(new Error("ERROR: Read from admin of admin password should be allowed but is forbidden: ", decision));
+        } else
             console.log("Success: Read from admin to admin password granted");
 
         // ADMIN SETS PASSWORD OF USER
-        return pdp.checkWrite(adminInfo, sample.policies.defaultEntity, userInfo, sample.policies.defaultPasswd);
+        return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultPasswd);
     })
     .then(function(decision) {
         if(decision.result !== true)
@@ -178,7 +175,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from admin to user password granted");
 
         // ADMIN SETS ROLE OF USER
-        return pdp.checkWrite(adminInfo, sample.policies.defaultEntity, userInfo, sample.policies.defaultRole);
+        return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultRole);
     })
     .then(function(decision) {
         if(decision.result !== true)
@@ -187,7 +184,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from admin to user role granted");
 
         // USER SETS ROLE OF USER
-        return pdp.checkWrite(userInfo, sample.policies.defaultEntity, userInfo, sample.policies.defaultRole);
+        return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultRole);
     })
     .then(function(decision) {
         if(decision.result !== false)
@@ -196,7 +193,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from user to user role not granted");
 
         // USER SETS NAME OF SENSOR HE DOES NOT OWN
-        return pdp.checkWrite(userInfo, sample.policies.defaultEntity, sensorInfo, sample.policies.defaultEntity);
+        return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.sensor, sample.policies.defaultEntity);
     })
     .then(function(decision) {
         if(decision.result !== false)
@@ -205,7 +202,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from user to sensor name not granted");
 
         // ADMIN SETS NAME OF SENSOR HE OWNS
-        return pdp.checkWrite(adminInfo, sample.policies.defaultEntity, sensorInfo, sample.policies.defaultEntity);
+        return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.sensor, sample.policies.defaultEntity);
     })
     .then(function(decision) {
         if(decision.result !== true)
@@ -218,7 +215,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
     })
     .then(function(papRecord) {
         // DECLASSIFY SENSOR RECORD SENT TO ADMIN
-        return pep.declassify(sample.entities.sensor, papRecord, adminInfo, sample.policies.defaultActor);
+        return pep.declassify(sample.entities.sensor, papRecord, sample.entities.admin, sample.policies.defaultActor);
     })
     .then(function(filteredObject) {
         if(filteredObject.credentials.length != 2)
@@ -231,7 +228,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
     })
     .then(function(papRecord) {
         // DECLASSIFY SENSOR RECORD SENT TO USER
-        return pep.declassify(sample.entities.sensor, papRecord, userInfo, sample.policies.defaultActor);
+        return pep.declassify(sample.entities.sensor, papRecord, sample.entities.user, sample.policies.defaultActor);
     })
     .then(function(filteredObject) {
         if(filteredObject.credentials.length != 0)
@@ -243,7 +240,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
     })
     .then(function() {
         // USER SETS NAME OF CLIENT HE DOES NOT OWN
-        return pdp.checkWrite(userInfo, sample.policies.defaultEntity, clientInfo, sample.policies.defaultEntity);
+        return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.client, sample.policies.defaultEntity);
     })
     .then(function(decision) {
         if(decision.result !== false)
@@ -252,7 +249,7 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
             console.log("Success: Write from user to client name not granted");
 
         // ADMIN SETS NAME OF CLIENT HE OWNS
-        return pdp.checkWrite(adminInfo, sample.policies.defaultEntity, clientInfo, sample.policies.defaultEntity);
+        return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.client, sample.policies.defaultEntity);
     })
     .then(function(decision) {
         if(decision.result !== true)
@@ -268,7 +265,11 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
 
         return Promise.all(deletions);
     })
-    .then(function() {
+    .then(function(values) {
+        for(var d in values)
+            if(values[d] !== true)
+                return Promise.reject(new Error("ERROR: Property policy deletion was not successful"));
+        
         return pap.get(sample.entities.sensor.id);
     })
     .then(function(r) {
@@ -279,15 +280,31 @@ pdp.checkWrite(userInfo, sample.policies.defaultEntity, adminInfo, sample.polici
         else
             console.log("Success: Properties deleted successfully");
         
-        return pap.delEntity(sample.entities.sensor.id);
+           return pap.delEntity(sample.entities.sensor.id);
     })
-    .then(function() {
+    .then(function(del) {
+        if(del !== true)
+            return Promise.reject(new Error("ERROR: Entity policy deletion was not successful"));
+        else
+            console.log("Success: Entity policy deletion was triggered.");
+        
         return pap.get(sample.entities.sensor.id);
     })
-    .catch(function(reason) {
-        // TODO: The error caught here may have other reasons.
-        // Become more precise with distinguished errors
-        console.log("Success: Entity does not exist anymore. Call throws error: "+reason);
+    .then(function(r) {
+        if(r !== null)
+            return Promise.reject(new Error("ERROR: Entity policy deletion was not successful as the sensor still has a policy"));
+        else
+            console.log("Success: Sensor does not have policy after deletion.");
+
+        return pap.delEntity(sample.entities.sensor.id);
+    })
+    .then(function(del) {
+        if(del !== false)
+            return Promise.reject(new Error("ERROR: It should not be possible to delete an entity policy a second time!"));
+        else
+            console.log("Success: Entity can only be deleted once.");
+
+        return Promise.resolve();
     })
     .catch(function(reason) {
         if(reason && reason.stack !== undefined)

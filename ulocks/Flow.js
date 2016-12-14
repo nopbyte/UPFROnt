@@ -1,28 +1,29 @@
 "use strict";
 
-if(global && typeof print !== "function") {
-    var PolicyConfig = require("./PolicyConfig.js");
-    var Lock = require(PolicyConfig.rootDir + "./Lock.js");
-    var Entity = require(PolicyConfig.rootDir + "./Entity.js");
+var Lock = require("./Lock.js");
+var Entity = require("./Entity.js");
+
+function valid(o) {
+    return ((o !== undefined) && (o !== null));
 }
 
 var Flow = (function() {
     
     // Constructor
     var cls = function(flow) {
-        if(flow === undefined || flow === null) {
+        if(!valid(flow)) {
             throw new Error("Flow: Error: Cannot construct flow from undefined flow.");
         }
 
         // either source or target needs to be defined
-        if(!flow.hasOwnProperty('source') && (flow.source === undefined || flow.source === null) &&
-           !flow.hasOwnProperty('target') && (flow.target === undefined || flow.target === null)) {
+        if((!flow.hasOwnProperty('source') || !valid(flow.source)) &&
+           (!flow.hasOwnProperty('target') || !valid(flow.target))) {
             throw new Error("Flow: Error: Flow '"+JSON.stringify(flow)+"' does not specify source or target.");
-        } 
+        }
 
         // source or target cannot be defined at the same time
-        if(flow.hasOwnProperty('source') && (flow.source !== undefined || flow.source !== null) &&
-           flow.hasOwnProperty('target') && (flow.target !== undefined || flow.target !== null)) {
+        if(flow.hasOwnProperty('source') && valid(flow.source) &&
+           flow.hasOwnProperty('target') && valid(flow.target)) {
             throw new Error("Flow: Error: Flow specifies source and target at the same time.");
         }
 
@@ -37,7 +38,7 @@ var Flow = (function() {
             delete this['source'];
         }
 
-        if(flow.hasOwnProperty('locks') && flow.locks !== undefined && flow.locks !== null && flow.locks.length) {
+        if(flow.hasOwnProperty('locks') && valid(flow.locks) && flow.locks.length) {
             var l = flow.locks.length;
             if(l > 0) {
                 this.locks = [];
@@ -102,8 +103,7 @@ var Flow = (function() {
             var result = undefined;
 
             // incompatible flows to be compared
-            if((this.target !== null && otherFlow.source !== null) ||
-               (this.source !== null && otherFlow.target !== null))
+            if(valid(this.target) || valid(this.source))
                 return undefined;
 
             if(!this.source && !this.target)
@@ -205,7 +205,7 @@ var Flow = (function() {
                 });
 
                 if(conflictLocks.length) {
-                    var dummyFlow = new Flow({ target : { type : 'any' } });
+                    var dummyFlow = new Flow({ target : { type : Entity.MinType } });
                     for(var cl in conflictLocks) {
                         dummyFlow.locks = dummyFlow.lubLock(conflictLocks[cl]);
                     }

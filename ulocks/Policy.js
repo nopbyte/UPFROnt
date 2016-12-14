@@ -207,7 +207,7 @@ var Policy = (function() {
 
     // **method bot()** returns the least restrictive policy of the framework
     cls.bot = function() {
-        return new Policy([ { target : { type: 'any' } }, {source : { type : 'any'} } ], { type : 'any' });
+        return new Policy([ { target : { type: Entity.MinType } }, {source : { type : Entity.MinType } } ], { type : Entity.MinType });
     };
 
     // ## Public Methods
@@ -500,7 +500,7 @@ var Policy = (function() {
                     var conflicts = flow.getClosedLocks(context, flow.source.type);
                     trgResult.push(conflicts);
                 } else {
-                    console.log("\t\tEntity conflict! ("+flowSrc+" not dominated by writer)");
+                    // console.log("\t\tEntity conflict! ("+flowSrc+" not dominated by writer)");
                     trgResult.push({ allopen : false, conditional : false, entity : flowSrc });
                 }
             }

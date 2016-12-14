@@ -1,5 +1,8 @@
 "use strict";
 
+var fs = require("fs");
+var path = require("path");
+
 var PolicyConfig = require("./PolicyConfig");
 var Entity = require("./Entity.js");
 
@@ -48,6 +51,48 @@ function Lock(lock) {
     }
 };
 
+function readLocks(dir) {
+    var lockFiles = [];
+    var locks = [];
+    var loads = [];
+
+    try {
+        lockFiles = fs.readdirSync(dir);
+    } catch(err) {
+        return Promise.reject(err);
+    }
+    
+    lockFiles.forEach(function(lockFile) {
+        loads.push(new Promise( function(resolve, reject) {
+            var filePath = path.join(dir, lockFile);
+            var stats = fs.statSync(filePath);
+            if (stats.isFile()) {
+                if (/\.js$/.test(filePath)) {
+                    try {
+                        var newLock = require(filePath);
+                        newLock(Lock);
+                        resolve();
+                    } catch(err) {
+                        console.log("ERROR: Unable to load lock in '"+filePath+"'!");
+                        reject(err);
+                    }
+                }
+            }
+        }));
+    });
+
+    return Promise.all(loads);
+};
+
+Lock.init = function(settings) {
+    var baseDir = process.cwd();
+    
+    if(settings.lockDir[0] !== path.sep)
+        settings.lockDir = baseDir + path.sep + settings.lockDir;
+    
+    return readLocks(settings.lockDir);
+};
+
 Lock.createLock = function(lock) {
     if(!lockConstructors[lock.lock]) {
         // console.log("CALL INITLOCKS FOR "+lock.lock);
@@ -91,24 +136,6 @@ Lock.registerLock = function (type, constructor) {
         throw new Error("Constructor for "+type+" is invalid.");
 
     lockConstructors[type] = constructor;
-};
-
-// TODO: This static method should be replaced by a version which can
-// automatically load locks from a directory. For now, all locks are registered manually
-Lock.initLocks = function() {
-    if(typeof print !== "function") {
-        // at some point the directory should also be read automatically
-        // all Locks which should be available
-
-        if(!lockConstructors["hasId"])
-            require(PolicyConfig.lockDir+"HasIdLock.js");
-        if(!lockConstructors["isOwner"])
-            require(PolicyConfig.lockDir+"IsOwnerLock.js");
-        if(!lockConstructors["attrEq"])
-            require(PolicyConfig.lockDir+"AttributeEqLock.js");
-        if(!lockConstructors["closed"])
-            require(PolicyConfig.lockDir+"Closed.js");
-    }
 };
 
 Lock.prototype.neg = function() {

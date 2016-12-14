@@ -20,9 +20,9 @@ IsOwnerLock.prototype.handleUser = function(subject, object, isStatic) {
     if(isStatic) {
         throw new Error("handleUser for hasId lock is not supported in static analysis yet");
     } else {
-        if((subject.type == 'user' && object.data.hasOwnProperty('owner') &&
+        if((subject.type == '/user' && object.data.hasOwnProperty('owner') &&
             object.data.owner == subject.data.id && !this.not) ||
-           ((subject.type != 'user' || !object.data.hasOwnProperty('owner') ||
+           ((subject.type != '/user' || !object.data.hasOwnProperty('owner') ||
              object.data.owner != subject.data.id) && this.not))
             return { result : true, conditional : false };
         else
@@ -34,9 +34,9 @@ IsOwnerLock.prototype.handleSensor = function(subject, object, isStatic) {
     if(isStatic) {
         throw new Error("handleSO for hasId lock is not supported in static analysis yet");
     } else {
-        if((subject.type == 'sensor' && object.data.hasOwnProperty('owner') &&
+        if((subject.type == '/sensor' && object.data.hasOwnProperty('owner') &&
             object.data.owner == subject.data.id && !this.not) ||
-           ((subject.type != 'sensor' || !object.data.hasOwnProperty('owner') ||
+           ((subject.type != '/sensor' || !object.data.hasOwnProperty('owner') ||
              object.data.owner != subject.data.id) && this.not))
             return { result : true, conditional : false };
         else
@@ -75,13 +75,13 @@ IsOwnerLock.prototype.handleAny = function(subject, object, isStatic) {
 IsOwnerLock.prototype.isOpen = function(context, scope) {
 	if(context) {
         switch(scope) {
-        case "any" :
+        case "/any" :
             return this.handleAny(context.subject, context.object, context.isStatic);
             break;
-        case "user" :
+        case "/user" :
             return this.handleUser(context.subject, context.object, context.isStatic);
             break;
-        case "sensor" :
+        case "/sensor" :
             return this.handleSensor(context.subject, context.object, context.isStatic);
             break;
         default :

@@ -1,6 +1,6 @@
 module.exports = function(Lock) {
     "use strict";
-
+    
     var AttributeEqLock = function(lock) {
         // call the super class constructor
         Lock.call(this, lock);

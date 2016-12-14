@@ -67,25 +67,30 @@ function Entity (entity) {
         this.value = entity.value;
 };
 
-/** 
- * Default types of entities.
- */
-Entity.Types = Object.freeze({
-    "any"    :  1,
-    "uri"    :  2,
-    "group"  :  3,
-    "user"   :  4,
-    "app"    :  5,
-    "node"   :  6,
-    "so"     :  6,
-    "sensor" :  6,
-    "api"    :  7,
-    "const"  :  8,
-    "attr"   :  8,
-    "prop"   :  8,
-    "var"    :  8,
-    "msg"    :  8
-});
+Entity.init = function(settings) {
+    if(settings.entityTypes === undefined || settings.entityTypes === null)
+        return Promise.reject(new Error("ERROR: Unable to set up Entity types for ULock framework!"));
+    
+    Entity.Types = settings.entityTypes;
+    Entity.MinType = null;
+    
+    (function setMinType() {
+        var min = null
+        for(var s in Entity.Types) {
+            if(s !== undefined) {
+                if(min == null || Entity.Types[s] < min) {
+                    min = Entity.Types[s];
+                    Entity.MinType = s;
+                }
+            }
+        }
+    })();
+
+    if(Entity.MinType !== undefined && Entity.MinType !== null)
+        return Promise.resolve();
+    else
+        return Promise.reject(new Error("ERROR: Unable to compute most general Entity type in ULock framework!"));
+};
 
 // TODO: Put into config file and derive most general entity type!
 
