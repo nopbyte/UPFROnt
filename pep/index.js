@@ -28,34 +28,30 @@ function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effP
 
         if(objectPolicy.self !== null || effPolicy === undefined)
             effPolicy = objectPolicy.self;
-        
+
         for(var p in object) {
             if(object.hasOwnProperty(p)) {
-                
-                if(!curOPol.properties.hasOwnProperty(p) && effPolicy === null)
-                    continue;
-                    
-                if(typeof object[p] === "object") {
-                    curOPol = curOPol.properties[p];
 
+                if(!(curOPol.properties && curOPol.properties.hasOwnProperty(p)) && effPolicy === null)
+                    continue;
+
+                if(typeof object[p] === "object" && curOPol.properties && curOPol.properties.hasOwnProperty(p)) {
                     var createCallback = function(p) {
                         return function(o) {
                             filtered[p] = o;
                             return Promise.resolve();
                         };
                     };
-                    
-                    promises.push(declassifyRec(objInfo, object[p], curOPol, target, targetPolicy, effPolicy).then(createCallback(p)));
-                } else {
-                    var filter = false;
 
+                    promises.push(declassifyRec(objInfo, object[p], curOPol.properties[p], target, targetPolicy, effPolicy).then(createCallback(p)));
+                } else {
                     var createCallback = function(p) {
                         return function(decision) {
                             if(decision.result)
                                 filtered[p] = object[p];
                         };
                     };
-                    
+
                     if(!curOPol.properties.hasOwnProperty(p)) {
                         promises.push(pdp.checkRead(target, targetPolicy, objInfo, effPolicy).then(createCallback(p)));
                     } else {

@@ -61,6 +61,7 @@ function getProp(id, property) {
     });
 }
 
+// TODO be more error friendly: address missing, e.g. property=system[0].key but entity with id does not have this property
 function setProp(id, property, policy) {
     if(policyDB === null)
         return Promise.reject(new Error("PAP has not been initialized."));
@@ -84,8 +85,10 @@ function setProp(id, property, policy) {
             pol.self = policy;
         } else {
             var curObj = pol;
-            property.replace("[", ".");
-            property.replace("]", ".");
+            property = property
+                .replace(/\[/, ".")
+                .replace(/\]./g, ".")
+                .replace(/\]$/g, "");
             var attrNames = property.split(".");
             while(attrNames.length) {
                 var n = attrNames.shift();
@@ -102,7 +105,6 @@ function setProp(id, property, policy) {
         resolve(true);
     });
 }
-                
 
 function delProp(id, property) {
     if(policyDB === null)
