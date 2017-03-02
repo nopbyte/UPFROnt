@@ -1,200 +1,89 @@
 var clone = require('clone');
 
-var Policy = require('ULocks').Policy
+var Storage = require('./storage');
 
-var policyDB = null;
+var api = require('./api');
 
-var emptyEntry = {
-    self : null,
-    properties : {}
+var settings = {};
+
+try {
+    var settings = require('./settings');
+} catch(e) {
+    console.log("PAP: Warning! PAP settings were not found or are invalid: " + e);
+    console.log("PAP: Uses default settings!");
+    settings.server = {
+        host: "localhost",
+        port: 1234,
+        path: "/",
+        cluster: 1,
+        tls: false
+    };
+    settings.storage = {
+        type: "mongodb",
+        host: "localhost",
+        port: 27017,
+        cache: false
+    };
 }
 
-function init(store) {
-    policyDB = store;
-
-    return Promise.resolve();
-}
-
-function get(id) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-    
-    return new Promise(function (resolve, reject) {
-        if(policyDB.hasOwnProperty(id))
-            resolve(policyDB[id]);
-        else
-            resolve(null);
-    });
-}
-
-function getProp(id, property) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-
-    return new Promise(function (resolve, reject) {
-        if(property === undefined || property === null)
-            property = false;
-        
-        if(policyDB.hasOwnProperty(id)) {
-            if(!property) {
-                resolve(policyDB[id].self);
-            } else {
-                var curObj = policyDB[id];
-                var effPolicy = curObj.self;
-                var attrNames = property.split(".");
-                while(attrNames.length) {
-                    var n = attrNames.shift();
-                    if(curObj.properties.hasOwnProperty(n)) {
-                        curObj = curObj.properties[n];
-                        effPolicy = curObj.self;
-                    } else
-                        resolve(effPolicy);
-                }
-
-                if(curObj.self === null)
-                    resolve(effPolicy);
-                else
-                    resolve(curObj.self);
-            }
-        } else
-            resolve(null);
-    });
-}
-
-// TODO be more error friendly: address missing, e.g. property=system[0].key but entity with id does not have this property
-function setProp(id, property, policy) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-
-    return new Promise(function (resolve, reject) {
-        if(policy === undefined || policy === null) {
-            policy = property;
-            property = false;
-        }
-
-        if(!policyDB.hasOwnProperty(id))
-            resolve(false);
-
-        if(!(policy instanceof Policy)) {
-            policy = new Policy(policy);
-        }
-        
-        var pol = policyDB[id];
-        
-        if(!property) {
-            pol.self = policy;
+function init(userSettings) {
+    return new Promise(function(resolve, reject) {
+        if(!userSettings.server) {
+            Storage.init(userSettings.storage, settings.server.cluster).then(function(db) {
+                policyDB = db;
+                api.init(userSettings, db);
+                
+                // we are done - PAP is running locally without
+                // any REST interface
+                resolve();
+            }, function(e) {
+                reject("ERROR: Unable to communicate to policy store. "+e);
+            });
         } else {
-            var curObj = pol;
-            property = property
-                .replace(/\[/, ".")
-                .replace(/\]./g, ".")
-                .replace(/\]$/g, "");
-            var attrNames = property.split(".");
-            while(attrNames.length) {
-                var n = attrNames.shift();
-                if(curObj.properties.hasOwnProperty(n)) {
-                    curObj = curObj.properties[n];
-                } else {
-                    curObj.properties[n] = clone(emptyEntry);
-                    curObj = curObj.properties[n];
+            var Server = require('./server');
+            var Rest = require('./rest');
+            
+            var server = new Server(userSettings.server);
+            server.init().then(function(isMaster) {
+                if(isMaster)
+                    resolve();
+                else {
+                    Storage.init(userSettings.storage, settings.server.cluster).then(function(db) {
+                        policyDB = db;
+                        api.init(userSettings, db);
+                        
+                        var s = Storage;
+                        s.set("3", [
+                            { target: { type: "user" } },
+                            { source: { type: "user" } } ]).then(function() {
+                                s.get(3).then(function(p) {
+                                    console.log("p for 5: " + JSON.stringify(p, null, 2));
+                                    s.get(3).then(function(p) {
+                                        console.log("p for 5: " + JSON.stringify(p, null, 2));
+                                    }, function(e) {
+                                        console.log("ERROR: ", e);
+                                    });
+                                }, function(e) {
+                                    console.log("ERROR: ", e);
+                                });
+                            }, function(e) {
+                                console.log("ERROR: ", e);
+                            });
+                        
+                        Rest.init(userSettings.server, server.app).then(function() {
+                            resolve();
+                        }, function() {
+                            reject("ERROR: Unable to initialize REST interface");
+                        })
+                    }, function(e) {
+                        reject("ERROR: Unable to communicate to policy store. "+e);
+                    });
                 }
-            }
-            curObj.self = policy;
-        }
-
-        resolve(true);
-    });
-}
-
-function delProp(id, property) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-
-    return new Promise(function (resolve, reject) {
-        if(property === undefined || property === null)
-            property = false;
-        
-        if(policyDB.hasOwnProperty(id)) {
-            if(!property) {
-                if(policyDB[id].self !== null) {
-                    policyDB[id].self = null;
-                    resolve(true);
-                } else
-                    resolve(false);
-            } else {
-                var curObj = policyDB[id];
-                var attrNames = property.split(".");
-                while(attrNames.length) {
-                    var n = attrNames.shift();
-                    if(curObj.properties.hasOwnProperty(n))
-                        curObj = curObj.properties[n];
-                    else
-                        resolve(false);
-                }
-
-                if(curObj.self !== null) {
-                    curObj.self = null;
-                    resolve(true);
-                }
-            }
-        } else 
-            resolve(false);
-    });
-}
-
-function getEntity(id) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-
-    return new Promise(function (resolve, reject) {
-        if(policyDB.hasOwnProperty(id))
-            resolve(policyDB[id].entity);
-        else
-            resolve(null);
-    });
-}
-
-function createEntity(id, policy) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-
-    return new Promise(function (resolve, reject) {
-        if(!(policy instanceof Policy)) {
-            policy = new Policy(policy);
-        }
-        
-        if(policyDB.hasOwnProperty(id)) {
-            policyDB[id].entity = policy;
-        } else {
-            policyDB[id] = clone(emptyEntry);
-            policyDB[id].entity = policy;
-        }
-
-        resolve(true);
-    });
-}
-
-function delEntity(id) {
-    if(policyDB === null)
-        return Promise.reject(new Error("PAP has not been initialized."));
-
-    return new Promise(function (resolve, reject) {
-        if(policyDB.hasOwnProperty(id)) {
-            delete policyDB[id];
-            resolve(true);
-        } else {
-            resolve(false);
+            }, function(e) {
+                reject("ERROR: Unable to start server");
+            });
         }
     });
-}
+};
 
-module.exports = {
-    init         : init,
-    createEntity : createEntity,
-    getEntity    : getEntity,
-    delEntity    : delEntity,
-    getProp      : getProp,
-    get          : get,
-    setProp      : setProp,
-    delProp      : delProp
-}
+init(settings);
