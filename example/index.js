@@ -73,6 +73,11 @@ upfront.init(settings).catch(
         setting.push(pap.setProp(sample.entities.sensor.id, "credentials", sample.policies.defaultPasswd));
         setting.push(pap.setProp(sample.entities.client.id, "credentials", sample.policies.defaultPasswd));
 
+        // TODO what if one element is declassified in an array ... it should still be in the correct position
+        // but it also reveals that there was another declassified element
+        setting.push(pap.setProp(sample.entities.sensor.id, "credentials[1].system", sample.policies.defaultRole));
+        setting.push(pap.setProp(sample.entities.sensor.id, "credentials[2].system", sample.policies.defaultRole));
+
         return Promise.all(setting);
     })
     .then( function () {     
@@ -160,7 +165,6 @@ upfront.init(settings).catch(
     })
     .then(function(decision) {
         if(decision.result !== true) {
-            console.log("XXX DECISION: ", decision);
             return Promise.reject(new Error("ERROR: Read from admin of admin password should be allowed but is forbidden: ", decision));
         } else
             console.log("Success: Read from admin to admin password granted");
@@ -218,8 +222,8 @@ upfront.init(settings).catch(
         return pep.declassify(sample.entities.sensor, papRecord, sample.entities.admin, sample.policies.defaultActor);
     })
     .then(function(filteredObject) {
-        if(filteredObject.credentials.length != 2)
-            return Promise.reject(new Error("ERROR: Object was filtered incorrectly: ", filteredObject));
+        if(filteredObject.credentials.length != 4)
+            return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
             console.log("Success: Credentials were not filtered: ", filteredObject);
 
@@ -231,8 +235,8 @@ upfront.init(settings).catch(
         return pep.declassify(sample.entities.sensor, papRecord, sample.entities.user, sample.policies.defaultActor);
     })
     .then(function(filteredObject) {
-        if(filteredObject.credentials.length != 0)
-            return Promise.reject(new Error("ERROR: Object was filtered incorrectly: ", filteredObject));
+        if(filteredObject.credentials.length != 3)
+            return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
             console.log("Success: Credentials were filtered: ", filteredObject);
 

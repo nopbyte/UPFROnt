@@ -23,7 +23,12 @@ module.exports = {
             "id"    : "some_id_for_sensor",
             "type"  : "/sensor",
             "owner" : "bob!@!agile-local",
-            "credentials" : [ "foo", "bar" ]
+            "credentials" : [
+                "start token",
+                {"system" : "dropbox", "value": "xyzsometoken"},
+                {"system" : "github", "value": "xyzsomeothertoken"},
+                "sometoken in a mixed array"
+            ]
         },
         client : {
             "name"  : "client",
