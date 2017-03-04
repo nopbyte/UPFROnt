@@ -3,23 +3,38 @@ var redis = require("redis");
 var cache = null;
 var settings = null;
 
-var pub = redis.createClient();
-var sub = redis.createClient();
+var pub = null; 
+var sub = null;
+
+// TODO: check what publish and subscribe return if not promissified
 
 function init(_settings, handle) {
-    settings = _settings;
-    
-    sub.on("message", function(channel, message) {
-        var json = JSON.parse(message);
-        if(json && json.msg && json.id !== process.pid) {
-            console.log("update from " + json.id);
-            handle(json.msg);
-        }
+    return new Promise(function(resolve, reject) {
+        settings = _settings;
+        
+        pub = redis.createClient();
+        sub = redis.createClient();
+
+        pub.on('error', function(err) {
+            reject(err);
+        });
+
+        pub.on('ready', function() {          
+            if(sub !== null) {
+                sub.on("message", function(channel, message) {
+                    var json = JSON.parse(message);
+                    if(json && json.msg && json.id !== process.pid) {
+                        console.log("update from " + json.id);
+                        handle(json.msg);
+                    }
+                });
+                
+                sub.subscribe(settings.channel);
+            }
+
+            resolve();
+        });
     });
-
-    sub.subscribe(settings.channel);
-
-    return Promise.resolve();
 }
 
 function publish(message) {
