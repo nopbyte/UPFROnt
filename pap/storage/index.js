@@ -23,7 +23,8 @@ function init(settings, cluster) {
             try {
                 dbModule = require("./modules/"+settings.type);
             } catch(e) {
-                return Promise.reject("ERROR: Unable to load database module '"+settings.type+"'. " + e);
+                reject("ERROR: Unable to load database module '"+settings.type+"'. " + e);
+                return;
             };
             
             dbModule.init(settings).then(function() {
@@ -61,8 +62,9 @@ function init(settings, cluster) {
                         }, function(e) {
                             reject(e);
                         });
-                    } else
+                    } else {
                         resolve();
+                    }
                 }
             }, function(e) {
                 reject(e);
@@ -338,12 +340,12 @@ function _delProperty(pObject, _property) {
 };  
 
 function getEntity(id) {
-    if(dbModule === null)
-        reject("ERROR: PAP does not know how to lookup policies.");
-    else if(id === undefined)
-        reject("ERROR: Must specify id when calling getEntity");
-
     return new Promise(function (resolve, reject) {
+        if(dbModule === null)
+            reject("ERROR: PAP does not know how to lookup policies.");
+        else if(id === undefined)
+            reject("ERROR: Must specify id when calling getEntity");
+
         var policyObject = undefined;
         if(policyCache !== null) {
             policyObject = policyCache.get(id);
@@ -434,28 +436,3 @@ function delEntity(id) {
         }
     });
 };
-
-/* var settings = require("../settings").storage;
-var s = require("../storage");
-
-s.init(settings).then(function() {
-    s.set("3", [
-        { target: { type: "user" } },
-        { source: { type: "user" } } ]).then(function() {
-            s.get(3).then(function(p) {
-                console.log("p for 5: " + JSON.stringify(p, null, 2));
-                s.get(3).then(function(p) {
-                    console.log("p for 5: " + JSON.stringify(p, null, 2));
-                }, function(e) {
-                    console.log("ERROR: ", e);
-                });
-            }, function(e) {
-                console.log("ERROR: ", e);
-            });
-        }, function(e) {
-            console.log("ERROR: ", e);
-        });
-}, function(e) {
-    console.log("ERROR: ", e);
-});
-*/

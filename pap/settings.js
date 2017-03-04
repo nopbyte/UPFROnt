@@ -9,7 +9,7 @@ module.exports = {
         port: 1234,
         path: "/",
         tls: false,
-        cluster: 2
+        cluster: 4
     },
     // storage specifies where the policies
     // are stored persistently:

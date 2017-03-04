@@ -9,13 +9,14 @@ function Server(settings) {
     this.app = null;
 };
 
-Server.prototype.init = function() {
+Server.prototype.init = function(initFunction) {
     this.app = express();
 
     if(this.settings && this.settings.cluster && this.settings.cluster > 1) {
         this.cluster = require('cluster');
         this.useCluster = true;
-    }
+    } else
+        this.useCluster = false;
 
     if (this.useCluster && this.cluster.isMaster) {
         // Count the machine's CPUs
@@ -23,23 +24,49 @@ Server.prototype.init = function() {
         if(this.settings.cluster < cpuCount)
             cpuCount = this.settings.cluster;
 
+        var self = this;
+        var promises = [];
         // Create a worker for each CPU
         for (var i = 0; i < cpuCount; i += 1) {
-            this.cluster.fork();
+            promises.push(new Promise(function(resolve, reject) {
+                var worker = self.cluster.fork().on('online', function() {
+                    worker.on('message', function(msg) {
+                        if(msg.msg) {
+                            console.log(msg.msg);
+                            resolve();
+                        } else {
+                            reject(new Error(e))
+                        };
+                    });
+                });
+            }));
         }
+
+        return Promise.all(promises);
     } else {
         var self = this;
         this.server = this.app.listen(
             this.settings.port,
             this.settings.host,
             function () {
-                process.tite = "UPFront PAP";
-                console.log('UPFront PAP now running at '+getListenPath(self.settings));
+                initFunction().then(function() {
+                    var msg = "UPFront PAP instance ("+process.pid+") is now running at "+getListenPath(self.settings);
+                    process.tite = "UPFront PAP";
+                    if(self.useCluster) 
+                        process.send({msg: msg});
+                    else
+                        console.log(msg);
+                }, function(e) {
+                    if(self.useCluster) 
+                        process.send({msg: e});
+                    else
+                        console.log(e);
+                })
             }
         );
     }
 
-    return Promise.resolve(this.cluster.isMaster);
+    return Promise.resolve(false);
 };
 
 function getListenPath(settings) {

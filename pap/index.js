@@ -1,5 +1,7 @@
 var clone = require('clone');
 
+// var Promise = require("bluebird");
+
 var Storage = require('./storage');
 
 var api = require('./api');
@@ -26,11 +28,28 @@ try {
     };
 }
 
+function getServerInit(userSettings, server, Rest) {
+    return function() {
+        return new Promise(function(resolve, reject) {
+            Storage.init(userSettings.storage, userSettings.server.cluster).then(function(db) {
+                api.init(userSettings, db);
+
+                Rest.init(userSettings.server, server.app).then(function() {
+                    resolve();
+                }, function() {
+                    reject("ERROR: Unable to initialize REST interface");
+                })
+            }, function(e) {
+                reject(e);
+            });
+        });
+    };
+}
+
 function init(userSettings) {
     return new Promise(function(resolve, reject) {
         if(!userSettings.server) {
-            Storage.init(userSettings.storage, settings.server.cluster).then(function(db) {
-                policyDB = db;
+            Storage.init(userSettings.storage, userSettings.server.cluster).then(function(db) {
                 api.init(userSettings, db);
                 
                 // we are done - PAP is running locally without
@@ -44,46 +63,32 @@ function init(userSettings) {
             var Rest = require('./rest');
             
             var server = new Server(userSettings.server);
-            server.init().then(function(isMaster) {
-                if(isMaster)
-                    resolve();
-                else {
-                    Storage.init(userSettings.storage, settings.server.cluster).then(function(db) {
-                        policyDB = db;
-                        api.init(userSettings, db);
-                        
-                        var s = Storage;
-                        s.set("3", [
-                            { target: { type: "user" } },
-                            { source: { type: "user" } } ]).then(function() {
-                                s.get(3).then(function(p) {
-                                    console.log("p for 5: " + JSON.stringify(p, null, 2));
-                                    s.get(3).then(function(p) {
-                                        console.log("p for 5: " + JSON.stringify(p, null, 2));
-                                    }, function(e) {
-                                        console.log("ERROR: ", e);
-                                    });
-                                }, function(e) {
-                                    console.log("ERROR: ", e);
-                                });
-                            }, function(e) {
-                                console.log("ERROR: ", e);
-                            });
-                        
-                        Rest.init(userSettings.server, server.app).then(function() {
-                            resolve();
-                        }, function() {
-                            reject("ERROR: Unable to initialize REST interface");
-                        })
-                    }, function(e) {
-                        reject("ERROR: Unable to communicate to policy store. "+e);
-                    });
+            server.init(getServerInit(userSettings, server, Rest)).then(function(workers) {
+                if(workers) {
+                    console.log("PAP Cluster is ready to receive requests.");
                 }
             }, function(e) {
-                reject("ERROR: Unable to start server");
+                console.log(e);
             });
         }
     });
 };
 
-init(settings);
+function get(id, property) {
+    return Storage.get(id, property);
+}
+
+function set(id, property) {
+    return Storage.set(id,property);
+}
+
+function del(id, property) {
+    return Storage.del(id, property);
+}
+
+module.exports = {
+    init: init,
+    get: get,
+    set: set,
+    del: del
+};
