@@ -1,4 +1,5 @@
 var express = require('express');
+var bodyParser = require('body-parser');
 
 function Server(settings) {
     this.settings = settings;
@@ -11,6 +12,9 @@ function Server(settings) {
 
 Server.prototype.init = function(initFunction) {
     this.app = express();
+
+    this.app.use(bodyParser.json());
+    this.app.use(bodyParser.urlencoded({extended: true}));
 
     if(this.settings && this.settings.cluster && this.settings.cluster > 1) {
         this.cluster = require('cluster');
