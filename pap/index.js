@@ -32,7 +32,7 @@ function getServerInit(userSettings, server, Rest) {
     return function() {
         return new Promise(function(resolve, reject) {
             Storage.init(userSettings.storage, userSettings.server.cluster).then(function(db) {
-                api.init(userSettings, db);
+                api.init(userSettings, Storage);
 
                 Rest.init(userSettings.server, server.app).then(function() {
                     resolve();
