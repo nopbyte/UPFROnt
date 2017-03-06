@@ -20,6 +20,7 @@
         "Access Control Framework"
     ],
     "dependencies": {
+        "body-parser": "^1.17.0",
         "clone": "^2.1.0",
         "cluster": "^0.7.7",
         "express": "^4.14.1",
