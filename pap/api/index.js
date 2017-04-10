@@ -70,13 +70,16 @@ function getProperty(id, property) {
     
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
-            var pO = entry.pO;
-            var propPolicy = _getProperty(pO, property)
-            if(propPolicy !== null) {
-                // console.log("Construct policy from: ", propPolicy);
-                resolve(new Policy(propPolicy));
-            }
-            else
+            if(entry) {
+                var pO = entry.pO;
+                var propPolicy = _getProperty(pO, property)
+                if(propPolicy !== null) {
+                    // console.log("Construct policy from: ", propPolicy);
+                    resolve(new Policy(propPolicy));
+                }
+                else
+                    resolve(null);
+            } else
                 resolve(null);
         }, function(e) {
             reject(e);
@@ -122,14 +125,17 @@ function _getProperty(policyObject, _property) {
 function setProperty(id, property, policy) {
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(record) {
-            var pO = record.pO;
-            var p = _setProperty(pO, property, policy);
-            storage.set(id, p, record.t).then(function() {
-                resolve(p);
-            }, function(e) {
-                // Unable to update policy backend
-                reject(e);
-            });
+            if(record) {
+                var pO = record.pO;
+                var p = _setProperty(pO, property, policy);
+                storage.set(id, p, record.t).then(function() {
+                    resolve(p);
+                }, function(e) {
+                    // Unable to update policy backend
+                    reject(e);
+                });
+            } else
+                resolve(null);
         }, function(e) {
             // Unable to find policy Object for entity
             reject(e);
