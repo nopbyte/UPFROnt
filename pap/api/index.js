@@ -1,16 +1,26 @@
+var clone = require('clone');
+var Promise = require('bluebird');
+
+var Policy = require('ULocks').Policy;
+
 var storage = null;
+
+var emptyEntry = {
+    self : null,
+    properties : {}
+}
 
 function init(settings, _storage) {
     storage = _storage;
 }
 
-Promise = require('bluebird');
-
 module.exports = {
     init: init,
     get: get,
     set: set,
-    del: del
+    del: del,
+
+    getFullRecord: getFullRecord
 }
 
 function get(id, property) {
@@ -19,8 +29,9 @@ function get(id, property) {
     if(id === undefined)
         return Promise.reject("ERROR: PAP api.get(...): Missing valid identifier to call get.");
 
-    if(property === undefined)
+    if(property === undefined) {
         return getEntity(id);
+    }
     else
         return getProperty(id, property);
 };
@@ -55,9 +66,18 @@ function del(id, property) {
 };
 
 function getProperty(id, property) {
+    // console.log("getProperty("+id+", '" + property+"')");
+    
     return new Promise(function(resolve, reject) {
-        storage.get(id).then(function(pO) {
-            resolve(_getProperty(pO, property));
+        storage.get(id).then(function(entry) {
+            var pO = entry.pO;
+            var propPolicy = _getProperty(pO, property)
+            if(propPolicy !== null) {
+                // console.log("Construct policy from: ", propPolicy);
+                resolve(new Policy(propPolicy));
+            }
+            else
+                resolve(null);
         }, function(e) {
             reject(e);
         });
@@ -65,6 +85,8 @@ function getProperty(id, property) {
 };
 
 function _getProperty(policyObject, _property) {
+    /* console.log("getProperty("+JSON.stringify(policyObject, "",2)+", '" + _property+"')");
+    console.log("self: ", policyObject.self);*/
     if(policyObject) {
         if(_property === "") {
             return policyObject.self;
@@ -84,6 +106,9 @@ function _getProperty(policyObject, _property) {
                 } else
                     return effPolicy;
             }
+
+            // console.log("-curObj: ", curObj);
+            // console.log("-effPolicy: ", effPolicy);
             
             if(curObj.self === null)
                 return effPolicy;
@@ -96,9 +121,10 @@ function _getProperty(policyObject, _property) {
 
 function setProperty(id, property, policy) {
     return new Promise(function(resolve, reject) {
-        storage.get(id).then(function(pO) {
+        storage.get(id).then(function(record) {
+            var pO = record.pO;
             var p = _setProperty(pO, property, policy);
-            storage.set(id, p).then(function() {
+            storage.set(id, p, record.t).then(function() {
                 resolve(p);
             }, function(e) {
                 // Unable to update policy backend
@@ -112,7 +138,7 @@ function setProperty(id, property, policy) {
 };
     
 // TODO be more error friendly: address missing, e.g. property=system[0].key but entity with id does not have this property
-function _setProperty(id, pol, property, policy) {        
+function _setProperty(pol, property, policy) {
     if(property === "") {
         pol.self = policy;
     } else {
@@ -139,17 +165,19 @@ function _setProperty(id, pol, property, policy) {
 
 function delProperty(id, property) {
     return new Promise(function(resolve, reject) {
-        dbModule.get(id).then(function(pO) {
-            if(pO) {
+        storage.get(id).then(function(entry) {
+            if(entry) {
+                var pO = entry.pO;
                 var p = _delProperty(pO, property);
-                storage.set(id, pObject).then(function() {
-                    resolve(p);
+                storage.set(id, p, entry.t).then(function(r) {
+                    resolve(r);
                 }, function(e) {
+                    console.log("ERROR: PAP API is unable to delete property in entity with id '"+id+"'");
                     // Unable to update policy backend
                     reject(e);
                 });
             } else {
-                resolve(pO);
+                resolve(null);
             }
         });
     });
@@ -183,17 +211,40 @@ function _delProperty(pObject, _property) {
 };  
 
 function getEntity(id) {
-    return storage.get(id);
+    return new Promise(function(resolve, reject) {
+        storage.get(id).then(function(entry) {
+            if(entry) {
+                // console.log("entry: ", entry);
+                var pO = entry.pO;
+                resolve(new Policy(pO.entity));
+            } else
+                resolve(null);
+        }, function(e) {
+            reject(e);
+        });
+    });
 };
 
 function setEntity(id, policy) {
     return new Promise(function (resolve, reject) {
-        storage.get(id).then(function(pO) {
-            if(pO === null)
+        storage.get(id).then(function(entry) {
+            var pO = null;
+            if(entry === null) {
                 pO = clone(emptyEntry);
+                entry = { t: "" };
+            } else {
+                if(entry.pO)
+                    pO = entry.pO;
+                else {
+                    pO = clone(emptyEntry);
+                    entry = { t: "" };
+                }
+            }
+
+            // console.log("setEntity: ", entry);
                 
             _setEntity(id, pO, policy).then(function(p) {
-                storage.set(id, p).then(function() {
+                storage.set(id, p, entry.t).then(function() {
                     resolve(p);
                 }, function(e) {
                     reject(e);
@@ -208,7 +259,7 @@ function setEntity(id, policy) {
 // TODO: update with change of ulock system
 function _setEntity(id, pO, policy) {
     return new Promise(function(resolve, reject) {
-        if(false && !(policy instanceof Policy))
+        if(!(policy instanceof Policy))
             try {
                 policy = new Policy(policy);
             } catch(e) {
@@ -223,5 +274,33 @@ function _setEntity(id, pO, policy) {
 };
 
 function delEntity(id) {
-    return storage.del(id);
+    return new Promise(function(resolve, reject) {
+        storage.del(id).then(function(entry) {
+            if(entry)
+                resolve(entry.pO);
+            else
+                resolve(null);
+        }, function(e) {
+            reject(e);
+        });
+    });
+};
+
+function getFullRecord(id) {
+    if(!storage)
+        return Promise.reject("ERROR: PAP API has not been initialized before use.");
+    if(id === undefined)
+        return Promise.reject("ERROR: PAP api.getFullRecord(...): Missing valid identifier to call getFullRecord.");
+
+    return new Promise(function(resolve, reject) {
+        storage.get(id).then(function(entry) {
+            if(entry) {
+                var pO = entry.pO;
+                resolve(pO);
+            } else
+                resolve(null);
+        }, function(e) {
+            reject(e);
+        });
+    });
 };
