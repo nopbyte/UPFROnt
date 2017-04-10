@@ -1,12 +1,18 @@
-var ULocks = require("ULocks");
+var pdp = require('./pdp');
 
 function init(settings) {
-    return ULocks.init(settings.ulocks);
+    return new Promise(function(resolve, reject) {
+        pdp.init(settings).then(function() {
+            resolve();
+        }, function(e) {
+            reject(e);
+        });
+    });
 }
 
 module.exports = {
     init : init,
-    pap : require("./pap"),
     pep : require("./pep"),
-    pdp : require("./pdp")
+    pdp : pdp,
+    pap : pdp.pap
 }
