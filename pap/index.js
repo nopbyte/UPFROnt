@@ -1,39 +1,42 @@
 var clone = require('clone');
 
-// var Promise = require("bluebird");
-
 var Storage = require('./storage');
 
 var api = require('./api');
 
 var settings = {};
+var server = null;
 
-try {
-    var settings = require('./settings');
-} catch(e) {
-    console.log("PAP: Warning! PAP settings were not found or are invalid: " + e);
-    console.log("PAP: Uses default settings!");
-    settings.server = {
-        host: "localhost",
-        port: 1234,
-        path: "/",
-        cluster: 1,
-        tls: false
-    };
-    settings.storage = {
+var defaultSettings = {
+    storage: {
         type: "mongodb",
         host: "localhost",
         port: 27017,
-        cache: false
-    };
+        password: "",
+        user: "",
+        dbName: "pap-database",
+        collection: "policies",
+
+        // specifies whether the module should check
+        // the cache to fetch a policy, of course,
+        // this may induce additional lookups but on
+        // average using the cache is recommended
+        cache: {
+            enabled: true,
+            TTL: 600,
+            pubsub: {
+                type: "redis",
+                channel: "policyUpdates"
+            }
+        }
+    }
 }
 
 function getServerInit(userSettings, server, Rest) {
     return function() {
         return new Promise(function(resolve, reject) {
-            Storage.init(userSettings.storage, userSettings.server.cluster).then(function(db) {
+            Storage.init(userSettings.storage, userSettings.server.cluster).then(function() {
                 api.init(userSettings, Storage);
-
                 Rest.init(userSettings.server, server.app).then(function() {
                     resolve();
                 }, function() {
@@ -47,10 +50,12 @@ function getServerInit(userSettings, server, Rest) {
 }
 
 function init(userSettings) {
+    if(!userSettings)
+        userSettings = defaultSettings;
     return new Promise(function(resolve, reject) {
         if(!userSettings.server) {
-            Storage.init(userSettings.storage, userSettings.server.cluster).then(function(db) {
-                api.init(userSettings, db);
+            Storage.init(userSettings.storage, false).then(function() {
+                api.init(userSettings, Storage);
                 
                 // we are done - PAP is running locally without
                 // any REST interface
@@ -62,33 +67,26 @@ function init(userSettings) {
             var Server = require('./server');
             var Rest = require('./rest');
             
-            var server = new Server(userSettings.server);
+            server = new Server(userSettings.server);
             server.init(getServerInit(userSettings, server, Rest)).then(function(workers) {
                 if(workers) {
                     console.log("PAP Cluster is ready to receive requests.");
+                    resolve();
                 }
             }, function(e) {
-                console.log(e);
+                reject(e);
             });
         }
     });
 };
 
-function get(id, property) {
-    return Storage.get(id, property);
-}
-
-function set(id, property) {
-    return Storage.set(id,property);
-}
-
-function del(id, property) {
-    return Storage.del(id, property);
-}
-
 module.exports = {
     init: init,
-    get: get,
-    set: set,
-    del: del
+    get: api.get,
+    set: api.set,
+    del: api.del,
+
+    getFullRecord: api.getFullRecord,
+
+    get app() { if(server) return server.app; else return null; }
 };

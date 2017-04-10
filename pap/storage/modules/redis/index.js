@@ -1,5 +1,7 @@
 var redis = require("redis");
 
+var Promise = require('bluebird');
+
 var cache = null;
 var settings = null;
 

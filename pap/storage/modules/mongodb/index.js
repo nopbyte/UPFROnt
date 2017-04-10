@@ -1,7 +1,10 @@
 var MongoClient = require("mongodb").MongoClient;
+var uuid = require("uuid/v4");
 
 var dbHandle = null;
 var policies = null;
+
+var Promise = require('bluebird');
 
 module.exports = {
     init: init,
@@ -45,7 +48,7 @@ function init(settings) {
 
 function read(id) {
     return new Promise(function(resolve, reject) {
-        policies.findOne({_id: id}, { fields: { pO: 1} }, function(err, policy) {
+        policies.findOne({_id: id}, { fields: { pO: 1, t: 1} }, function(err, policy) {
             if(err) {
                 reject(err);
                 console.log(err);
@@ -54,7 +57,7 @@ function read(id) {
                     resolve(null);
                 else {
                     if(policy.pO)
-                        resolve(policy.pO);
+                        resolve(policy);
                     else
                         reject("ERROR: Entry for entity '"+id+"' has invalid format.");
                 }
@@ -72,19 +75,21 @@ function create(id, policy) {
                 if(result.insertedCount != 1)
                     reject("ERROR: Unable to set policy for entity with id '"+id+"'");
                 else
-                    resolve(policy);
+                    resolve(result.value);
             }
         });
     });
 };
 
-function update(id, policy) {
+function update(id, policy, uid) {
     return new Promise(function(resolve, reject) {
-        policies.findAndModify({ _id: id }, [[ "_id", 1 ]], { pO: policy }, { upsert: true }, function(err, result) {
+        // console.log("Update '"+id+"' with Policy: <"+ policy+">");
+        policies.findAndModify({ _id: id, t: uid }, [[ "_id", 1 ]], { pO: policy, t: uuid() }, { upsert: true, new: true }, function(err, result) {
             if(err) {
+                console.log("ERROR: PAP: mongodb module: Most likely, entry for object with id '"+id+"' is outdated to update it (t: "+uid+")");
                 reject(err);
             } else {
-                resolve(policy);
+                resolve(result.value);
             }
         });
     });
@@ -92,11 +97,14 @@ function update(id, policy) {
 
 function del(id) {
     return new Promise(function(resolve, reject) {
-        policies.deleteOne({ _id: id }, function(err, result) {
+        policies.findOneAndDelete({ _id: id }, function(err, result) {
             if(err) {
                 reject(err);
             } else {
-                resolve();
+                if(result)
+                    resolve(result.value);
+                else
+                    resolve(result);
             }
         });
     });
