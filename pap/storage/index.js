@@ -23,12 +23,17 @@ function init(settings, cluster) {
                 // TODO: connect to another PAP
             } else {
                 try {
-                    dbModule = require("./modules/"+settings.type);
+                    if(settings.type ==="external" && settings.module_name){
+                       dbModule = require(settings.module_name);
+                    }
+                    else{
+                      dbModule = require("./modules/"+settings.type);
+                    }
                 } catch(e) {
                     reject("ERROR: Unable to load database module '"+settings.type+"'. " + e);
                     return;
                 };
-                
+
                 dbModule.init(settings).then(function() {
                     if(settings.cache && settings.cache.enabled) {
                         policyCache = new NodeCache({
@@ -50,7 +55,7 @@ function init(settings, cluster) {
                             } catch(e) {
                                 reject("ERROR: PAP is unable to load pubsub module for cache synching!");
                             }
-                            
+
                             pubSubModule.init(settings.cache.pubsub, function(id) {
                                 var p = policyCache.get(id);
                                 if(p) {
@@ -73,7 +78,7 @@ function init(settings, cluster) {
                 }, function(e) {
                     reject(e);
                 });
-            }                               
+            }
     });
 };
 
@@ -90,7 +95,7 @@ function get(id) {
             reject("ERROR: Storage.get(...): Missing valid identifier to call get.");
             return;
         }
-        
+
         if(dbModule === null)
             reject("ERROR: PAP does not know how to lookup policies.");
         else if(id === undefined)
@@ -123,7 +128,7 @@ function set(id, policyObject, uid) {
             reject("ERROR: Storage.set(...): Missing policyObject to call set.");
             return;
         }
-        
+
         if(dbModule === null)
             reject("ERROR: PAP does not know how to lookup policies.");
         else if(id === undefined)
