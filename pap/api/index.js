@@ -2,6 +2,9 @@ var clone = require('clone');
 var Promise = require('bluebird');
 var Locks = require("locks");
 
+var w = require("winston");
+w.level = process.env.LOG_LEVEL;
+
 var Policy = require('ULocks').Policy;
 
 var storage = null;
@@ -13,10 +16,8 @@ var emptyEntry = {
 }
 
 function init(settings, _storage) {
-    console.log("API INIT: ", _storage);
     storage = _storage;
-    console.log("storage: ", storage);
-    console.log("pid: ", process.pid);
+    w.info("After PAP.api init: storage: " + storage + " (pid: " + process.pid + ")");
 }
 
 module.exports = {
@@ -29,9 +30,6 @@ module.exports = {
 }
 
 function get(id, property) {
-    console.log("get: storage: ", storage);
-    console.log("pid: ", process.pid);
-
     if(!storage)
         return Promise.reject("ERROR: PAP API has not been initialized before use.");
     if(id === undefined)
@@ -43,10 +41,7 @@ function get(id, property) {
         return getProperty(id, property);
 };
 
-function set(id, property, policy) {
-    console.log("set: storage: ", storage);
-    console.log("pid: ", process.pid);
-    
+function set(id, property, policy) {    
     if(storage === null)
         return Promise.reject("ERROR: PAP API has not been initialized before use.");
     else if(id === undefined)
@@ -82,7 +77,7 @@ function getLock(id) {
 };
 
 function getProperty(id, property) {
-    // console.log("getProperty("+id+", '" + property+"')");
+    w.info("PAP.api.getProperty("+id+", '" + property+"')");
     
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
@@ -90,7 +85,6 @@ function getProperty(id, property) {
                 var pO = entry.pO;
                 var propPolicy = _getProperty(pO, property)
                 if(propPolicy !== null) {
-                    // console.log("Construct policy from: ", propPolicy);
                     resolve(new Policy(propPolicy));
                 }
                 else
@@ -104,8 +98,8 @@ function getProperty(id, property) {
 };
 
 function _getProperty(policyObject, _property) {
-    /* console.log("getProperty("+JSON.stringify(policyObject, "",2)+", '" + _property+"')");
-    console.log("self: ", policyObject.self);*/
+    w.info("PAP.api._getProperty("+JSON.stringify(policyObject, "",2)+", '" + _property+"')");
+    
     if(policyObject) {
         if(_property === "") {
             return policyObject.self;
@@ -125,9 +119,6 @@ function _getProperty(policyObject, _property) {
                 } else
                     return effPolicy;
             }
-
-            // console.log("-curObj: ", curObj);
-            // console.log("-effPolicy: ", effPolicy);
             
             if(curObj.self === null)
                 return effPolicy;
@@ -206,7 +197,7 @@ function delProperty(id, property) {
                         resolve(r);
                         mutex.unlock();
                     }, function(e) {
-                        console.log("ERROR: PAP API is unable to delete property in entity with id '"+id+"'");
+                        w.error("PAP.api.delProperty is unable to delete property in entity with id '"+id+"'");
                         // Unable to update policy backend
                         reject(e);
                         mutex.unlock();
@@ -251,7 +242,6 @@ function getEntity(id) {
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
             if(entry) {
-                // console.log("entry: ", entry);
                 var pO = entry.pO;
                 resolve(new Policy(pO.entity));
             } else
@@ -277,8 +267,6 @@ function setEntity(id, policy) {
                         pO = clone(emptyEntry);
                     }
                 }
-                
-                // console.log("setEntity: ", entry);
                 
                 _setEntity(id, pO, policy).then(function(p) {
                     storage.set(id, p).then(function() {
