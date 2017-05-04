@@ -22,6 +22,8 @@ module.exports = {
     // port
     // thus, specifying type "remote" and specifying
     // api yields an invalid configuration
+
+    // TODO: make sure that type contains a file name to the module which is then loaded
     storage: {
         type: "mongodb",
         host: "localhost",
@@ -35,8 +37,10 @@ module.exports = {
         // the cache to fetch a policy, of course,
         // this may induce additional lookups but on
         // average using the cache is recommended
+
+        // TODO: check whether leaving this out works
         cache: {
-            enabled: true,
+            enabled: false,
             TTL: 600,
             pubsub: {
                 type: "redis",

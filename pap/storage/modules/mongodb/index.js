@@ -1,5 +1,4 @@
 var MongoClient = require("mongodb").MongoClient;
-var uuid = require("uuid/v4");
 
 var dbHandle = null;
 var policies = null;
@@ -48,7 +47,7 @@ function init(settings) {
 
 function read(id) {
     return new Promise(function(resolve, reject) {
-        policies.findOne({_id: id}, { fields: { pO: 1, t: 1} }, function(err, policy) {
+        policies.findOne({_id: id}, { fields: { pO: 1 } }, function(err, policy) {
             if(err) {
                 reject(err);
                 console.log(err);
@@ -59,7 +58,7 @@ function read(id) {
                     if(policy.pO)
                         resolve(policy);
                     else
-                        reject("ERROR: Entry for entity '"+id+"' has invalid format.");
+                        reject(new Error("ERROR: Entry for entity '"+id+"' has invalid format."));
                 }
             }
         });
@@ -68,12 +67,13 @@ function read(id) {
 
 function create(id, policy) {
     return new Promise(function(resolve, reject) {
+        // TODO: check whether timestamp can be left out
         policies.insertOne({ _id: id, pO : policy}, function(err, result) {
             if(err)
                 reject(err);
             else {
                 if(result.insertedCount != 1)
-                    reject("ERROR: Unable to set policy for entity with id '"+id+"'");
+                    reject(new Error("ERROR: Unable to set policy for entity with id '"+id+"'"));
                 else
                     resolve(result.value);
             }
@@ -81,12 +81,10 @@ function create(id, policy) {
     });
 };
 
-function update(id, policy, uid) {
+function update(id, policy) {
     return new Promise(function(resolve, reject) {
-        // console.log("Update '"+id+"' with Policy: <"+ policy+">");
-        policies.findAndModify({ _id: id, t: uid }, [[ "_id", 1 ]], { pO: policy, t: uuid() }, { upsert: true, new: true }, function(err, result) {
+        policies.findAndModify({ _id: id }, [[ "_id", 1 ]], { pO: policy }, { upsert: true, new: true }, function(err, result) {
             if(err) {
-                console.log("ERROR: PAP: mongodb module: Most likely, entry for object with id '"+id+"' is outdated to update it (t: "+uid+")");
                 reject(err);
             } else {
                 resolve(result.value);

@@ -1,4 +1,8 @@
 var clone = require('clone');
+var w = require('winston');
+
+w.level = process.env.LOG_LEVEL;
+
 
 var Storage = require('./storage');
 
@@ -22,7 +26,7 @@ var defaultSettings = {
         // this may induce additional lookups but on
         // average using the cache is recommended
         cache: {
-            enabled: true,
+            enabled: false,
             TTL: 600,
             pubsub: {
                 type: "redis",
@@ -36,6 +40,7 @@ function getServerInit(userSettings, server, Rest) {
     return function() {
         return new Promise(function(resolve, reject) {
             Storage.init(userSettings.storage, userSettings.server.cluster).then(function() {
+                console.log("BEFORE API INIT ("+process.pid+")");
                 api.init(userSettings, Storage);
                 Rest.init(userSettings.server, server.app).then(function() {
                     resolve();
@@ -43,6 +48,7 @@ function getServerInit(userSettings, server, Rest) {
                     reject("ERROR: Unable to initialize REST interface");
                 })
             }, function(e) {
+                w.error("Unable to initialize storage module");
                 reject(e);
             });
         });
@@ -79,6 +85,8 @@ function init(userSettings) {
         }
     });
 };
+
+// TODO: disable get, set, del if PAP runs as server
 
 module.exports = {
     init: init,

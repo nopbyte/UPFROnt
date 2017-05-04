@@ -12,8 +12,6 @@ var setting = [];
 var retrieve = [];
 var deletions = [];
 
-var values = [];
-
 function chainError(e) {
     return Promise.reject(e);
 }
@@ -43,7 +41,7 @@ upfront.init(settings)
     })
     .then(function(v) {
         for(var i = 0; i < 5; i++)
-            console.log("values["+i+"]: ", v[i]);
+            console.log("values["+i+"]: " + v[i]);
         
         if(!v[0] || !v[0].eq(sample.policies.defaultActor) ||
            !v[1] || !v[1].eq(sample.policies.defaultActor) ||
@@ -51,47 +49,39 @@ upfront.init(settings)
            !v[3] || !v[3].eq(sample.policies.defaultActor) ||
            !v[4] || !v[4].eq(sample.policies.defaultActor))
             return Promise.reject(new Error("Actor policy mismatches!"));
-        
+
         var setting = [];
         // set the default policy for all properties, i.e. everyone may read only the owner may write
         // WARNING: In production this should first be set more restrictive, otherwise, the password
         // can be read during creation (use policy such as sample.policies.adminOnly)
-        setting.push(function() { return pap.set(sample.entities.user.id, "", sample.policies.defaultEntity)});
-        setting.push(function() { return pap.set(sample.entities.admin.id, "", sample.policies.defaultEntity)});
-        setting.push(function() { return pap.set(sample.entities.sensor.id, "", sample.policies.defaultEntity)});
-        setting.push(function() { return pap.set(sample.entities.client.id, "", sample.policies.defaultEntity)});
-        
+        setting.push(pap.set(sample.entities.user.id, "", sample.policies.defaultEntity));
+        setting.push(pap.set(sample.entities.admin.id, "", sample.policies.defaultEntity));
+        setting.push(pap.set(sample.entities.sensor.id, "", sample.policies.defaultEntity));
+        setting.push(pap.set(sample.entities.client.id, "", sample.policies.defaultEntity));
+
         // set the policies for the properties
-        setting.push(function() { return pap.set(sample.entities.user.id, "password", sample.policies.defaultPasswd)});
-        setting.push(function() { return pap.set(sample.entities.admin.id, "password", sample.policies.defaultPasswd)});
-        
-        setting.push(function() { return pap.set(sample.entities.user.id, "role", sample.policies.defaultRole)});
-        setting.push(function() { return pap.set(sample.entities.admin.id, "role", sample.policies.defaultRole)});
-        
-        setting.push(function() { return pap.set(sample.entities.sensor.id, "credentials", sample.policies.defaultPasswd)});
-        setting.push(function() { return pap.set(sample.entities.client.id, "credentials", sample.policies.defaultPasswd)});
-        
+        setting.push(pap.set(sample.entities.user.id, "password", sample.policies.defaultPasswd));
+        setting.push(pap.set(sample.entities.admin.id, "password", sample.policies.defaultPasswd));
+
+        setting.push(pap.set(sample.entities.user.id, "role", sample.policies.defaultRole));
+        setting.push(pap.set(sample.entities.admin.id, "role", sample.policies.defaultRole));
+
+        setting.push(pap.set(sample.entities.sensor.id, "credentials", sample.policies.defaultPasswd));
+        setting.push(pap.set(sample.entities.client.id, "credentials", sample.policies.defaultPasswd));
+
         // TODO what if one element is declassified in an array ... it should still be in the correct position
         // but it also reveals that there was another declassified element
-        setting.push(function() { return pap.set(sample.entities.sensor.id, "credentials[1].system", sample.policies.defaultRole)});
-        setting.push(function() { return pap.set(sample.entities.sensor.id, "credentials[2].system", sample.policies.defaultRole)});
+        setting.push(pap.set(sample.entities.sensor.id, "credentials[1].system", sample.policies.defaultRole));
+        setting.push(pap.set(sample.entities.sensor.id, "credentials[2].system", sample.policies.defaultRole));
 
-        values = [];
-        
-        return setting.reduce(function(p, n) {
-            return p.then(function(v) {
-                if(v) 
-                    values.push(v);
-                return n();
-            });
-        }, Promise.resolve(false));
+        return Promise.all(setting);
     }, function(e) {
         console.log("ERROR: Unable to retrieve all policies: " + e);
         return Promise.reject(e);
     })
-    .then(function() {
-        for(var i = 0; i < 11; i++)
-            console.log("values["+i+"]: ", values[i]);
+    .then(function(v) {
+        for(var i = 0; i < 12; i++)
+            console.log("values["+i+"]: ", v[i]);
         
         var retrieve = [];
         retrieve.push(pap.get(sample.entities.user.id, ""));
@@ -103,17 +93,18 @@ upfront.init(settings)
         retrieve.push(pap.get(sample.entities.user.id, "password"));
         retrieve.push(pap.get(sample.entities.admin.id, "password"));
         
-                retrieve.push(pap.get(sample.entities.user.id, "role"));
+        retrieve.push(pap.get(sample.entities.user.id, "role"));
         retrieve.push(pap.get(sample.entities.admin.id, "role"));
         
         retrieve.push(pap.get(sample.entities.sensor.id, "credentials"));
         retrieve.push(pap.get(sample.entities.client.id, "credentials"));
         
-        retrieve.push(pap.get(sample.entities.sensor.id, "name"));
+        retrieve.push(pap.get(sample.entities.sensor.id, "credentials[1].system"));
+        retrieve.push(pap.get(sample.entities.sensor.id, "credentials[2].system"));
         
         return Promise.all(retrieve);
     }, chainError).then(function(values) {
-        for(var i = 0; i < 11; i++)
+        for(var i = 0; i < 12; i++)
             console.log("values["+i+"]: ", values[i]);
             
         if(!values[0].eq(sample.policies.defaultEntity) ||
@@ -135,7 +126,8 @@ upfront.init(settings)
            !values[9].eq(sample.policies.defaultPasswd))
             return Promise.reject(new Error("default credentials policy modified during creation or retrieval"));
                     
-        if(!values[10].eq(sample.policies.defaultEntity))
+        if(!values[10].eq(sample.policies.defaultRole) ||
+           !values[11].eq(sample.policies.defaultRole))
             return Promise.reject(new Error("default entity policy modified during creation or retrieval"));
 
         console.log("storing and retrieval works, testing policy decisions now");

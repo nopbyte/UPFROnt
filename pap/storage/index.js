@@ -1,10 +1,12 @@
 var NodeCache = require('node-cache');
 var clone = require('clone');
-
 var Promise = require('bluebird');
+var w = require('winston');
+
+w.level = process.env.LOG_LEVEL;
 
 var policyCache = null;
-var pubSubModule = null;
+var syncModule = require("./modules/nosync");;
 var dbModule = null;
 
 // TODO: Ensure that we get infos from storage module when it updates
@@ -12,17 +14,21 @@ var dbModule = null;
 
 function init(settings, cluster) {
     return new Promise(function(resolve, reject) {
-        if(!settings) {
-            reject("ERROR: PAP: Missing or invalid settings file.");
-            return;
-        }
+        if(dbModule !== null)
+            reject(new Error("Storage module has already been initialized"));
+        
+        if(!settings)
+            reject(new Error("ERROR: PAP: Missing or invalid settings file."));
+
         if(!settings.type)
-            reject("ERROR: PAP: Missing 'type' in PAP storage settings.");
+            reject(new Error("ERROR: PAP: Missing 'type' in PAP storage settings."));
         else
             if(settings.type === "remote") {
                 // TODO: connect to another PAP
+                reject(new Error("Remote storage type has not been implemented yet!"));
             } else {
                 try {
+                    // TODO: change such that it can also be loaded from an arbitrary directory
                     dbModule = require("./modules/"+settings.type);
                 } catch(e) {
                     reject("ERROR: Unable to load database module '"+settings.type+"'. " + e);
@@ -38,20 +44,23 @@ function init(settings, cluster) {
                             errorOnMissing: false
                         });
 
-                        if(!settings.cache.pubsub && cluster > 1) {
-                            reject("ERROR: PAP is misconfigured. Configuration specifies cache without a pubsub module for cache synchronisation!");
+                        if(!settings.cache.sync && cluster > 1) {
+                            reject("ERROR: PAP is misconfigured. Configuration specifies cache without a sync module for cache synchronisation!");
                             return;
                         }
 
                         if(cluster > 1) {
-                            console.log("PAP storage connects to pubsub server");
+                            w.info("PAP storage connects to synchronisation server");
                             try {
-                                pubSubModule = require("./modules/"+settings.cache.pubsub.type);
+                                // TODO: change such that it can also be loaded from an arbitrary directory
+                                syncModule = require("./modules/"+settings.cache.sync.type);
                             } catch(e) {
-                                reject("ERROR: PAP is unable to load pubsub module for cache synching!");
+                                reject(new Error("PAP is unable to load synchronization module for cache synching in cluster!"));
+                                w.error("PAP is unable to load synchronization module for cache synching in cluster!");
+                                return;
                             }
                             
-                            pubSubModule.init(settings.cache.pubsub, function(id) {
+                            syncModule.init(settings.cache.sync, function(id) {
                                 var p = policyCache.get(id);
                                 if(p) {
                                     policyCache.del(id);
@@ -60,8 +69,10 @@ function init(settings, cluster) {
                                     });
                                 }
                             }).then(function() {
+                                w.info("Storage successfully started synchronization module.");
                                 resolve();
                             }, function(e) {
+                                w.error("Storage module is unable to instantiate synchronization module.");
                                 reject(e);
                             });
                         } else {
@@ -104,15 +115,19 @@ function get(id) {
             dbModule.read(id).then(function(pO) {
                 if(policyCache !== null)
                     policyCache.set(id, pO);
+                w.log('debug', "Cache miss! Retrieved object '"+id+"' from db.");
                 resolve(pO);
             }, function(e) {
                 reject(e);
             });
-        } else
+        } else {
+            w.log('debug', "Retrieved object '"+id+"' from cache.");
             resolve(policyObject);
+        }
     });
 };
 
+// TODO: requries some locking here in sync medium
 function set(id, policyObject, uid) {
     return new Promise(function (resolve, reject) {
         if(id === undefined) {
@@ -129,21 +144,26 @@ function set(id, policyObject, uid) {
         else if(id === undefined)
             reject("ERROR: Must specify id, policy when calling setEntity");
 
-        dbModule.update(id, policyObject, uid).then(function(r) {
-            if(policyCache !== null)
-                policyCache.set(id, r);
+        syncModule.lock(id).then(function(unlock) {
+            dbModule.update(id, policyObject, uid).then(function(r) {
+                if(policyCache !== null)
+                    policyCache.set(id, r);
+                
+                if(syncModule)
+                    syncModule.mark(id);
 
-            if(pubSubModule)
-                pubSubModule.publish(id);
-
-            resolve(r.pO);
-        }, function(e) {
-            reject(e);
+                resolve(r.pO);
+                unlock();
+            }, function(e) {
+                reject(e);
+                unlock();
+            });
         });
     });
 };
 
 /** returns the deleted object or null if the object did not exist in the database before deletion */
+// TODO: requries some locking here in sync medium
 function del(id) {
     return new Promise(function (resolve, reject) {
         if(dbModule === null)
@@ -151,12 +171,16 @@ function del(id) {
         else if(id === undefined)
             reject("ERROR: Must specify id when calling delEntity");
 
-        dbModule.del(id).then(function(entity) {
-            if(policyCache !== null)
-                policyCache.del(id);
-            resolve(entity);
-        }, function(e) {
-            reject(e);
+        syncModule.lock(id).then(function(unlock) {
+            dbModule.del(id).then(function(entity) {
+                if(policyCache !== null)
+                    policyCache.del(id);
+                resolve(entity);
+                unlock();
+            }, function(e) {
+                reject(e);
+                unlock();
+            });
         });
     });
 };

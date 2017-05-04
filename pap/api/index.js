@@ -1,9 +1,11 @@
 var clone = require('clone');
 var Promise = require('bluebird');
+var Locks = require("locks");
 
 var Policy = require('ULocks').Policy;
 
 var storage = null;
+var locks = {}
 
 var emptyEntry = {
     self : null,
@@ -11,7 +13,10 @@ var emptyEntry = {
 }
 
 function init(settings, _storage) {
+    console.log("API INIT: ", _storage);
     storage = _storage;
+    console.log("storage: ", storage);
+    console.log("pid: ", process.pid);
 }
 
 module.exports = {
@@ -24,19 +29,24 @@ module.exports = {
 }
 
 function get(id, property) {
+    console.log("get: storage: ", storage);
+    console.log("pid: ", process.pid);
+
     if(!storage)
         return Promise.reject("ERROR: PAP API has not been initialized before use.");
     if(id === undefined)
         return Promise.reject("ERROR: PAP api.get(...): Missing valid identifier to call get.");
 
-    if(property === undefined) {
+    if(property === undefined)
         return getEntity(id);
-    }
     else
         return getProperty(id, property);
 };
 
 function set(id, property, policy) {
+    console.log("set: storage: ", storage);
+    console.log("pid: ", process.pid);
+    
     if(storage === null)
         return Promise.reject("ERROR: PAP API has not been initialized before use.");
     else if(id === undefined)
@@ -45,7 +55,7 @@ function set(id, property, policy) {
         return Promise.reject("ERROR: PAP api.set(...): Missing valid policy to call set.");
     else if(typeof(property) !== "string" && policy !== undefined)
         return Promise.reject("ERROR: PAP api.set(...): Property in set must be a string.");
-        
+
     if(property !== undefined && policy === undefined)
         return setEntity(id, property);
     else
@@ -63,6 +73,12 @@ function del(id, property) {
         else
             return delProperty(id, property);
     }
+};
+
+function getLock(id) {
+    if(!locks.hasOwnProperty(id))
+        locks[id] = Locks.createMutex();
+    return locks[id];
 };
 
 function getProperty(id, property) {
@@ -122,23 +138,31 @@ function _getProperty(policyObject, _property) {
         return null;
 };
 
-function setProperty(id, property, policy) {
+function setProperty(id, property, policy, release) {
     return new Promise(function(resolve, reject) {
-        storage.get(id).then(function(record) {
-            if(record) {
-                var pO = record.pO;
-                var p = _setProperty(pO, property, policy);
-                storage.set(id, p, record.t).then(function() {
-                    resolve(p);
-                }, function(e) {
-                    // Unable to update policy backend
-                    reject(e);
-                });
-            } else
-                resolve(null);
-        }, function(e) {
-            // Unable to find policy Object for entity
-            reject(e);
+        var mutex = locks[id];
+        mutex.lock(function() {
+            storage.get(id).then(function(record) {
+                if(record) {
+                    var pO = record.pO;
+                    var p = _setProperty(pO, property, policy);
+                    storage.set(id, p).then(function() {
+                        resolve(p);
+                        mutex.unlock();
+                    }, function(e) {
+                        // Unable to update policy backend
+                        reject(e);
+                        mutex.unlock();
+                    });
+                } else {
+                    resolve(null);
+                    mutex.unlock();
+                }
+            }, function(e) {
+                // Unable to find policy Object for entity
+                reject(e);
+                mutex.unlock();
+            });
         });
     });
 };
@@ -171,20 +195,27 @@ function _setProperty(pol, property, policy) {
 
 function delProperty(id, property) {
     return new Promise(function(resolve, reject) {
-        storage.get(id).then(function(entry) {
-            if(entry) {
-                var pO = entry.pO;
-                var p = _delProperty(pO, property);
-                storage.set(id, p, entry.t).then(function(r) {
-                    resolve(r);
-                }, function(e) {
-                    console.log("ERROR: PAP API is unable to delete property in entity with id '"+id+"'");
-                    // Unable to update policy backend
-                    reject(e);
-                });
-            } else {
-                resolve(null);
-            }
+        var mutex = getLock(id);
+        
+        mutex.lock(function() {
+            storage.get(id).then(function(entry) {
+                if(entry) {
+                    var pO = entry.pO;
+                    var p = _delProperty(pO, property);
+                    storage.set(id, p).then(function(r) {
+                        resolve(r);
+                        mutex.unlock();
+                    }, function(e) {
+                        console.log("ERROR: PAP API is unable to delete property in entity with id '"+id+"'");
+                        // Unable to update policy backend
+                        reject(e);
+                        mutex.unlock();
+                    });
+                } else {
+                    resolve(null);
+                    mutex.unlock();
+                }
+            });
         });
     });
 };
@@ -233,30 +264,34 @@ function getEntity(id) {
 
 function setEntity(id, policy) {
     return new Promise(function (resolve, reject) {
-        storage.get(id).then(function(entry) {
-            var pO = null;
-            if(entry === null) {
-                pO = clone(emptyEntry);
-                entry = { t: "" };
-            } else {
-                if(entry.pO)
-                    pO = entry.pO;
-                else {
+        var mutex = getLock(id);
+        mutex.lock(function() {
+            storage.get(id).then(function(entry) {
+                var pO = null;
+                if(entry === null) {
                     pO = clone(emptyEntry);
-                    entry = { t: "" };
+                } else {
+                    if(entry.pO)
+                        pO = entry.pO;
+                    else {
+                        pO = clone(emptyEntry);
+                    }
                 }
-            }
-
-            // console.log("setEntity: ", entry);
                 
-            _setEntity(id, pO, policy).then(function(p) {
-                storage.set(id, p, entry.t).then(function() {
-                    resolve(p);
+                // console.log("setEntity: ", entry);
+                
+                _setEntity(id, pO, policy).then(function(p) {
+                    storage.set(id, p).then(function() {
+                        resolve(p);
+                        mutex.unlock();
+                    }, function(e) {
+                        reject(e);
+                        mutex.unlock();
+                    });
                 }, function(e) {
                     reject(e);
+                    mutex.unlock();
                 });
-            }, function(e) {
-                reject(e);
             });
         });
     });
@@ -281,13 +316,21 @@ function _setEntity(id, pO, policy) {
 
 function delEntity(id) {
     return new Promise(function(resolve, reject) {
-        storage.del(id).then(function(entry) {
-            if(entry)
-                resolve(entry.pO);
-            else
-                resolve(null);
-        }, function(e) {
-            reject(e);
+        var mutex = getLock(id);
+
+        mutex.lock(function() {
+            storage.del(id).then(function(entry) {
+                if(entry) {
+                    resolve(entry.pO);
+                    mutex.unlock();
+                } else {
+                    resolve(null);
+                    mutex.unlock();
+                }
+            }, function(e) {
+                reject(e);
+                mutex.unlock();
+            });
         });
     });
 };

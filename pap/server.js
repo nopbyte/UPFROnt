@@ -37,11 +37,13 @@ Server.prototype.init = function(initFunction) {
                 var worker = self.cluster.fork().on('online', function() {
                     worker.on('message', function(msg) {
                         if(msg.msg) {
-                            console.log(msg.msg);
                             resolve();
+                        } else if(msg.error) {
+                            reject(new Error(JSON.stringify(msg.error)));
+                            worker.kill();
                         } else {
-                            reject(new Error(e))
-                        };
+                            reject(new Error("Unspecified error in worker."));
+                        }
                     });
                 });
             }));
@@ -57,6 +59,7 @@ Server.prototype.init = function(initFunction) {
                 function () {
                     initFunction().then(function() {
                         var msg = "UPFront PAP instance ("+process.pid+") is now running at "+getListenPath(self.settings);
+                        console.log("HERE");
                         process.tite = "UPFront PAP";
                         if(self.useCluster) 
                             process.send({msg: msg});
@@ -64,8 +67,8 @@ Server.prototype.init = function(initFunction) {
                             resolve(msg);
                         }
                     }, function(e) {
-                        if(self.useCluster) 
-                            process.send({msg: e});
+                        if(self.useCluster)
+                            process.send({error: e});
                         else
                             reject(e);
                     })
