@@ -1,3 +1,5 @@
+"use strict";
+
 var clone = require("clone");
 var equal = require("deep-equal");
 var uuid = require("uuid");
@@ -11,14 +13,40 @@ var emptyObject = {
     p: {}
 };
 
-/** @class */
+/**
+ * Constructs a new PolicyObject from another object or creates an empty PolicyObject
+ * @constructor
+ * @param {undefined|null|Object} object - Another PolicyObject from which to copy relevant properties.
+ */
 function PolicyObject(object) {
-    /** @member {object} dictionary A dictionary of all policies contained in this PolicyObject */
+    /**
+     * @memberof PolicyObject
+     * @instance
+     * @member {object} dictionary A dictionary of all policies contained in this PolicyObject */
     this.d = {};
-    /** @member {object} entity The effective policy used when the entity represented by this object becomes active */
+    /**
+     * @memberof PolicyObject
+     * @instance
+     * @member {object} entity The effective policy used when the entity represented by this object becomes active */
     this.e = null;
-    /** @member {object} object The structure of the PolicyObject */
+    /**
+     * @memberof PolicyObject
+     * @instance
+     * @member {object} object The structure of the PolicyObject */
     this.o = clone(emptyObject);
+
+    if(object) {
+        if((object.d && !object.o) ||
+           (!object.d && object.o))
+            w.error("Cannot construct PolicyObject from invalid object");
+
+        if(object.d && object.o) {
+            this.d = object.d;
+            this.o = object.o;
+        }
+        if(object.e)
+            this.e = object.e;
+    }
 };
 
 function getDictionaryPolicy(dict, ref) {
@@ -56,7 +84,9 @@ function delDictionaryRef(dict, ref) {
     }
 };
 
-/** @function
+/**
+ * @public
+ * @function
  * @param {string} property - The path to the property for which the policy should be deleted.
  * @param {Object} policy - The object representing the policy to be set for the specified property path.
  * @returns {null|Object} Returns null if the property path did not specify a policy before or the policy object replaced by the new one.
