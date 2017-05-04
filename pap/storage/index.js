@@ -28,13 +28,17 @@ function init(settings, cluster) {
                 reject(new Error("Remote storage type has not been implemented yet!"));
             } else {
                 try {
-                    // TODO: change such that it can also be loaded from an arbitrary directory
-                    dbModule = require("./modules/"+settings.type);
+                    if(settings.type ==="external" && settings.module_name){
+                       dbModule = require(settings.module_name);
+                    }
+                    else{
+                      dbModule = require("./modules/"+settings.type);
+                    }
                 } catch(e) {
                     reject("ERROR: Unable to load database module '"+settings.type+"'. " + e);
                     return;
                 };
-                
+
                 dbModule.init(settings).then(function() {
                     if(settings.cache && settings.cache.enabled) {
                         policyCache = new NodeCache({
@@ -59,7 +63,7 @@ function init(settings, cluster) {
                                 w.error("PAP is unable to load synchronization module for cache synching in cluster!");
                                 return;
                             }
-                            
+
                             syncModule.init(settings.cache.sync, function(id) {
                                 var p = policyCache.get(id);
                                 if(p) {
@@ -84,7 +88,7 @@ function init(settings, cluster) {
                 }, function(e) {
                     reject(e);
                 });
-            }                               
+            }
     });
 };
 
@@ -101,7 +105,7 @@ function get(id) {
             reject("ERROR: Storage.get(...): Missing valid identifier to call get.");
             return;
         }
-        
+
         if(dbModule === null)
             reject("ERROR: PAP does not know how to lookup policies.");
         else if(id === undefined)
@@ -138,7 +142,7 @@ function set(id, policyObject, uid) {
             reject("ERROR: Storage.set(...): Missing policyObject to call set.");
             return;
         }
-        
+
         if(dbModule === null)
             reject("ERROR: PAP does not know how to lookup policies.");
         else if(id === undefined)
