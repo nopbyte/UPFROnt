@@ -142,9 +142,9 @@ function setProperty(id, property, policy, release) {
     return new Promise(function(resolve, reject) {
         var mutex = locks[id];
         mutex.lock(function() {
-            storage.get(id).then(function(record) {
-                if(record) {
-                    var pO = record.pO;
+            storage.get(id).then(function(entry) {
+                if(entry) {
+                    var pO = entry.pO;
                     var p = _setProperty(pO, property, policy);
                     storage.set(id, p).then(function() {
                         resolve(p);
