@@ -28,7 +28,7 @@
         "mongodb": "^2.2.24",
         "node-cache": "^4.1.1",
         "redis": "^2.6.5",
-        "ulocks": "https://github.com/SEDARI/ulocks.git",
+        "ulocks": "https://github.com/SEDARI/ulocks.git#9bd491bc202c434f42d3ccddd039c256447b6213",
         "uuid": "^3.0.1"
     },
     "optionalDependencies": {
