@@ -1,41 +1,40 @@
 {
-    "name": "UPFROnt",
-    "version": "0.2.0",
-    "description": "ULock Policy FRamewOrk",
-    "homepage": "https://github.com/SEDARI/UPFROnt/wiki",
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/SEDARI/UPFROnt.git"
-    },
-    "contributors": [
-        {
-            "name": "Daniel Schreckling"
-        }
-    ],
-    "keywords": [
-        "Usage Locks",
-        "Flow Locks",
-        "Flow Control",
-        "Access Control Framework"
-    ],
-    "dependencies": {
-        "body-parser": "^1.17.0",
-        "bluebird": "*",
-        "clone": "^2.1.0",
-        "cluster": "^0.7.7",
-        "express": "^4.14.1",
-        "mongodb": "^2.2.24",
-        "node-cache": "^4.1.1",
-        "redis": "^2.6.5",
-        "ulocks": "https://github.com/SEDARI/ulocks.git#9bd491bc202c434f42d3ccddd039c256447b6213",
-        "uuid": "^3.0.1"
-    },
-    "optionalDependencies": {
-    },
-    "devDependencies": {
-    },
-    "engines": {
-        "node": ">=4.0 <=7.2.1"
+  "name": "UPFROnt",
+  "version": "0.2.0",
+  "description": "ULock Policy FRamewOrk",
+  "homepage": "https://github.com/SEDARI/UPFROnt/wiki",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SEDARI/UPFROnt.git"
+  },
+  "contributors": [
+    {
+      "name": "Daniel Schreckling"
     }
+  ],
+  "keywords": [
+    "Usage Locks",
+    "Flow Locks",
+    "Flow Control",
+    "Access Control Framework"
+  ],
+  "dependencies": {
+    "agile-upfront-leveldb": "git+https://github.com/Agile-IoT/agile-upfront-leveldb.git",
+    "bluebird": "*",
+    "body-parser": "^1.17.0",
+    "clone": "^2.1.0",
+    "cluster": "^0.7.7",
+    "express": "^4.14.1",
+    "mongodb": "^2.2.24",
+    "node-cache": "^4.1.1",
+    "redis": "^2.6.5",
+    "ulocks": "https://github.com/SEDARI/ulocks.git#9bd491bc202c434f42d3ccddd039c256447b6213",
+    "uuid": "^3.0.1"
+  },
+  "optionalDependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=4.0 <=7.2.1"
+  }
 }
