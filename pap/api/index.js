@@ -17,16 +17,10 @@ var emptyEntry = {
 
 function init(settings, _storage) {
     storage = _storage;
-    w.info("After PAP.api init: storage: " + storage + " (pid: " + process.pid + ")");
 }
 
-module.exports = {
-    init: init,
-    get: get,
-    set: set,
-    del: del,
-
-    getFullRecord: getFullRecord
+function finish() {
+    return Promise.resolve();
 }
 
 function get(id, property) {
@@ -76,29 +70,32 @@ function getLock(id) {
     return locks[id];
 };
 
+// TODO: Check for errors during policy creation
 function getProperty(id, property) {
-    w.info("PAP.api.getProperty("+id+", '" + property+"')");
+    w.debug("PAP.api.getProperty("+id+", '" + property+"')");
     
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
             if(entry) {
+                w.info("PAP: Retrieved policy object for id '"+id+"': ", entry);
                 var pO = entry.pO;
                 var propPolicy = _getProperty(pO, property)
+                w.info("PAP: Retrieved policy for property '"+property+"': ", propPolicy);
                 if(propPolicy !== null) {
                     resolve(new Policy(propPolicy));
-                }
-                else
+                } else
                     resolve(null);
             } else
                 resolve(null);
         }, function(e) {
+            w.debug("PAP.api.getProperty: Entity with id '"+id+"' does not exist.");
             reject(e);
         });
     });
 };
 
 function _getProperty(policyObject, _property) {
-    w.info("PAP.api._getProperty("+JSON.stringify(policyObject, "",2)+", '" + _property+"')");
+    w.debug("PAP.api._getProperty("+JSON.stringify(policyObject)+", '" + _property+"')");
     
     if(policyObject) {
         if(_property === "") {
@@ -157,11 +154,12 @@ function setProperty(id, property, policy, release) {
         });
     });
 };
-    
+
 // TODO be more error friendly: address missing, e.g. property=system[0].key but entity with id does not have this property
+// TODO: check for errors while creating policies
 function _setProperty(pol, property, policy) {
     if(property === "") {
-        pol.self = policy;
+        pol.self = new Policy(policy);
     } else {
         var curObj = pol;
         property = property
@@ -178,7 +176,7 @@ function _setProperty(pol, property, policy) {
                 curObj = curObj.properties[n];
             }
         }
-        curObj.self = policy;
+        curObj.self = new Policy(policy);
     }
 
     return pol;
@@ -230,7 +228,7 @@ function _delProperty(pObject, _property) {
             else
                 return pObject;
         }
-    
+        
         if(curObj.self !== null)
             curObj.self = null;
     }
@@ -238,6 +236,7 @@ function _delProperty(pObject, _property) {
     return pObject;
 };  
 
+// TODO: check for errors during policy creation
 function getEntity(id) {
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
@@ -341,3 +340,13 @@ function getFullRecord(id) {
         });
     });
 };
+
+module.exports = {
+    init: init,
+    finish: finish,
+    get: get,
+    set: set,
+    del: del,
+
+    getFullRecord: getFullRecord
+}

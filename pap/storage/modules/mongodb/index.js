@@ -5,15 +5,6 @@ var policies = null;
 
 var Promise = require('bluebird');
 
-module.exports = {
-    init: init,
-
-    create: create,
-    update: update,
-    read: read,
-    del: del
-};
-
 /**
  * Initializes the database
  *
@@ -27,20 +18,35 @@ function init(settings) {
     dbURL += settings.host + ":"+settings.port+"/" + settings.dbName;
 
     return new Promise(function(resolve, reject) {
-        MongoClient.connect(dbURL, function(error, db) {
-            if(error) {
+        try {
+            MongoClient.connect(dbURL, function(error, db) {
+                if(error) {
+                    reject(error);
+                } else {
+                    dbHandle = db;
+                    collection = db.collection(settings.collection, function(error, collection) {
+                        if(error) {
+                            reject(error);
+                        } else {
+                            policies = collection;
+                            resolve(policies);
+                        }
+                    });
+                }
+            });
+        } catch(e) {
+            reject(e);
+        }
+    });
+};
+
+function finish() {
+    return new Promise(function(resolve, reject) {
+        dbHandle.close(function(error, result) {
+            if(error !== null)
                 reject(error);
-            } else {
-                dbHandle = db;
-                collection = db.collection(settings.collection, function(error, collection) {
-                    if(error) {
-                        reject(error);
-                    } else {
-                        policies = collection;
-                        resolve(policies);
-                    }
-                });
-            }
+            else
+                resolve(result);
         });
     });
 };
@@ -107,3 +113,14 @@ function del(id) {
         });
     });
 };
+
+module.exports = {
+    init: init,
+    finish: finish,
+
+    create: create,
+    update: update,
+    read: read,
+    del: del
+};
+

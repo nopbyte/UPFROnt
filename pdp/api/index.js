@@ -1,4 +1,6 @@
 // TODO: Check promises!!!
+var w = require('winston');
+w.level = process.env.LOG_LEVEL;
 
 var Promise = require('bluebird');
 
@@ -11,6 +13,10 @@ var pap = null;
 function init(settings, PAP) {
     pap = PAP;
     return ULocks.init(settings.ulocks);
+}
+
+function finish() {
+    return Promise.resolve();
 }
 
 function valid(o) {
@@ -46,6 +52,7 @@ function checkArgs(subject, subjectPolicy, object, objectPolicy, method) {
 };
 
 function checkRead(subject, subjectPolicy, object, objectPolicy) {
+    w.debug("PDP.api.checkRead");
     return new Promise(function(resolve, reject) {
         if(pap === null)
             reject("ERROR: PDP.api.checkRead: PAP is not available. Init PDP before using it.");
@@ -64,7 +71,6 @@ function checkRead(subject, subjectPolicy, object, objectPolicy) {
                         reject(e);
                     });
             }, function(e) {
-                console.log("object: ", object);
                 reject(e);
             });
         }
@@ -167,10 +173,9 @@ function checkReadWithPo(subject, subjectPolicy, object, objectPolicy) {
         data : object
     }
     
-    return new Promise(function (resolve, reject) {
-        var context = new Context(subjectInfo, objectInfo);
-        resolve(objectPolicy.checkRead(subjectPolicy, context));
-    });
+    var context = new Context(subjectInfo, objectInfo);
+
+    return objectPolicy.checkRead(subjectPolicy, context);
 }
 
 function checkWriteWithPo(subject, subjectPolicy, object, objectPolicy) {
@@ -182,7 +187,6 @@ function checkWriteWithPo(subject, subjectPolicy, object, objectPolicy) {
             objectPolicy = new Policy(objectPolicy);
     }
     catch(e) {
-        console.log("something is wrong");
         return Promise.reject(e);
     }
 
@@ -203,15 +207,13 @@ function checkWriteWithPo(subject, subjectPolicy, object, objectPolicy) {
         data : object
     }
     
-    return new Promise(function (resolve, reject) {
-        var context = new Context(subjectInfo, objectInfo);
-        var d = objectPolicy.checkWrite(subjectPolicy, context);
-        resolve(d);
-    });
+    var context = new Context(subjectInfo, objectInfo);
+    return objectPolicy.checkWrite(subjectPolicy, context);
 }
 
 module.exports = {
     init: init,
+    finish: finish,
     checkRead: checkRead,
     checkWrite: checkWrite
 }

@@ -4,6 +4,9 @@
  * @author Daniel Schreckling
  */
 
+var w = require('winston');
+w.level = process.env.LOG_LEVEL;
+
 var clone = require('clone');
 
 var Promise=require('bluebird');
@@ -43,6 +46,8 @@ function isValid(o) {
  *
  */
 function declassify(object, objPolicyRecord, target, targetPolicy) {
+    w.debug("PEP.declassify");
+    
     if(!isValid(object))
         return Promise.reject(new Error("Unable to declassify invalid object"));
     
@@ -93,7 +98,7 @@ function genCheckReadPromise(property, object, target, targetPolicy, objInfo, ef
     return new Promise(function(resolve, reject) {
         pdp.checkRead(target, targetPolicy, objInfo, effPolicy).then(function(decision) {
             if(decision.result) {
-                // TODO: apply action here
+                // TODO: apply policy action here
                 resolve({ prop: property, value: object[property]});
             } else {
                 resolve({ prop: property, value: undefined });

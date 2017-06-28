@@ -2,8 +2,7 @@ var NodeCache = require('node-cache');
 var clone = require('clone');
 var Promise = require('bluebird');
 var w = require('winston');
-
-w.level = process.env.LOG_LEVEL;
+w.level = process.env.LOG_PAP;
 
 var policyCache = null;
 var syncModule = require("./modules/nosync");;
@@ -14,14 +13,17 @@ var dbModule = null;
 
 function init(settings, cluster) {
     return new Promise(function(resolve, reject) {
-        if(dbModule !== null)
-            reject(new Error("Storage module has already been initialized"));
-        
+        if(dbModule !== null) {
+            w.warn("PAP storage module has already been initialized before. Skip this initialization");
+            resolve(false);
+            return;
+        }
+
         if(!settings)
-            reject(new Error("ERROR: PAP: Missing or invalid settings file."));
+            reject(new Error("PAP: Missing or invalid settings file."));
 
         if(!settings.type)
-            reject(new Error("ERROR: PAP: Missing 'type' in PAP storage settings."));
+            reject(new Error("PAP: Missing 'type' in PAP storage settings."));
         else
             if(settings.type === "remote") {
                 // TODO: connect to another PAP
@@ -35,7 +37,8 @@ function init(settings, cluster) {
                       dbModule = require("./modules/"+settings.type);
                     }
                 } catch(e) {
-                    reject("ERROR: Unable to load database module '"+settings.type+"'. " + e);
+                    w.error("Unable to load database module '"+settings.type+"'. " + e);
+                    reject("Unable to load database module '"+settings.type+"'. " + e);
                     return;
                 };
 
@@ -74,16 +77,16 @@ function init(settings, cluster) {
                                 }
                             }).then(function() {
                                 w.info("Storage successfully started synchronization module.");
-                                resolve();
+                                resolve(true);
                             }, function(e) {
                                 w.error("Storage module is unable to instantiate synchronization module.");
                                 reject(e);
                             });
                         } else {
-                            resolve();
+                            resolve(true);
                         }
                     } else {
-                        resolve();
+                        resolve(true);
                     }
                 }, function(e) {
                     reject(e);
@@ -92,11 +95,11 @@ function init(settings, cluster) {
     });
 };
 
-module.exports = {
-    init : init,
-    get  : get,
-    set  : set,
-    del  : del
+function finish() {
+    if(dbModule === null)
+        return Promise.reject(new ERROR("Cannot close connection of storage module which has not been initialized."));
+    
+    return dbModule.finish();
 }
 
 function get(id) {
@@ -188,3 +191,11 @@ function del(id) {
         });
     });
 };
+
+module.exports = {
+    init : init,
+    finish: finish,
+    get  : get,
+    set  : set,
+    del  : del
+}

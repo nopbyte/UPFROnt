@@ -59,7 +59,6 @@ Server.prototype.init = function(initFunction) {
                 function () {
                     initFunction().then(function() {
                         var msg = "UPFront PAP instance ("+process.pid+") is now running at "+getListenPath(self.settings);
-                        console.log("HERE");
                         process.tite = "UPFront PAP";
                         if(self.useCluster) 
                             process.send({msg: msg});
