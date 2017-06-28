@@ -13,7 +13,8 @@ module.exports = {
                 "/prop"   :  6,
                 "/var"    :  6,
             },
-            lockDir : "/home/dasch/projects/UPFROnt/example/online/Locks/"
+            locks: "/home/dasch/projects/UPFROnt/example/simple/Locks/",
+            actions: "/home/dasch/projects/UPFROnt/example/simple/Actions"
         }
     },
     pap: {

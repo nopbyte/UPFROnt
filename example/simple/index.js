@@ -23,8 +23,6 @@ upfront.init(settings)
         return Promise.reject(e);
     })
     .then(function(u) {
-        console.log("User entry: ", u);
-
         return pap.set(user.id, "", defaultEntity);
     }, function(e) {
         console.log("ERROR: Unable to retrieve user entry.");
@@ -35,8 +33,6 @@ upfront.init(settings)
         console.log("ERROR: Unable to set user entry.");
         return Promise.reject(e);
     }).then(function(u) {
-        console.log("User entry: ", u);
-
         return pap.set(user.id, "address.street", defaultEntity);
     }, function(e) {
         console.log("ERROR: Unable to retrieve user entry.");
@@ -47,8 +43,6 @@ upfront.init(settings)
         console.log("ERROR: Unable to set user entry.");
         return Promise.reject(e);
     }).then(function(u) {
-        console.log("User entry: " + JSON.stringify(u, null, 2));
-
         return pap.set(user.id, "passwd", defaultEntity);
     }, function(e) {
         console.log("ERROR: Unable to retrieve user entry.");
@@ -59,8 +53,14 @@ upfront.init(settings)
         console.log("ERROR: Unable to set user entry.");
         return Promise.reject(e);
     }).then(function(u) {
-        console.log("User entry: " + JSON.stringify(u, null, 2));
+        console.log("Done.");
+        return upfront.finish();
     }, function(e) {
         console.log("ERROR: Unable to retrieve user entry.");
         return Promise.reject(e);
+    }).catch(function(reason) {
+        if(reason && reason.stack !== undefined)
+            console.log(reason.stack);
+        else
+            console.log("ERROR: "+reason);
     });

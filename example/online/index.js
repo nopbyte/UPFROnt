@@ -142,7 +142,9 @@ upfront.init(settings)
         var p = pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
         return p;
     }, chainError).then(function(decision) {
-        if(decision.result !== false)
+        console.log("decision: ", decision);
+        
+        if(decision.grant !== false)
             return Promise.reject(new Error("ERROR: Write from user to admin password should be forbidden but is allowed: ",decision));
         else
             console.log("Success: Write from user to admin not granted");
@@ -150,7 +152,7 @@ upfront.init(settings)
         // USER READS ADMIN PASSWORD
         return pdp.checkRead(sample.entities.user, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
     }, chainError).then(function(decision) {
-        if(decision.result !== false)
+        if(decision.grant !== false)
             return Promise.reject(new Error("ERROR: Read from user of admin password should be forbidden but is allowed: ",decision));
         else
             console.log("Success: Read from user to admin password not granted");
@@ -158,7 +160,7 @@ upfront.init(settings)
         // ADMIN WRITES ITS PASSWORD
         return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
     }, chainError).then(function(decision) {
-        if(decision.result !== true)
+        if(decision.grant !== true)
             return Promise.reject(new Error("ERROR: Write from admin to admin password should be allowed but is forbidden: ",decision));
         else
             console.log("Success: Write from admin to admin password granted");
@@ -166,7 +168,7 @@ upfront.init(settings)
         // ADMIN READS ITS PASSWORD
         return pdp.checkRead(sample.entities.admin, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
     }, chainError).then(function(decision) {
-        if(decision.result !== true) {
+        if(decision.grant !== true) {
             return Promise.reject(new Error("ERROR: Read from admin of admin password should be allowed but is forbidden: ", decision));
         } else
             console.log("Success: Read from admin to admin password granted");
@@ -174,23 +176,23 @@ upfront.init(settings)
         // ADMIN SETS PASSWORD OF USER
         return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultPasswd);
     }, chainError).then(function(decision) {
-        if(decision.result !== true)
-            return Promise.reject(new Error("ERROR: Write from admin to user password should be allowed but is forbidden: ",decision));
+        if(decision.grant !== true)
+            return Promise.reject(new Error("ERROR: Write from admin to user password should be allowed but is forbidden: " + JSON.stringify(decision)));
         else
             console.log("Success: Write from admin to user password granted");
 
         // ADMIN SETS ROLE OF USER
         return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultRole);
     }, chainError).then(function(decision) {
-        if(decision.result !== true)
-            return Promise.reject(new Error("ERROR: Write from admin to user role should be allowed but is forbidden: ",decision));
+        if(decision.grant !== true)
+            return Promise.reject(new Error("ERROR: Write from admin to user role should be allowed but is forbidden: " + JSON.stringify(decision)));
         else
             console.log("Success: Write from admin to user role granted");
 
         // USER SETS ROLE OF USER
         return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultRole);
     }, chainError).then(function(decision) {
-        if(decision.result !== false)
+        if(decision.grant !== false)
             return Promise.reject(new Error("ERROR: Write from user to user role should be forbidden but is allowed: ",decision));
         else
             console.log("Success: Write from user to user role not granted");
@@ -198,7 +200,7 @@ upfront.init(settings)
         // USER SETS NAME OF SENSOR HE DOES NOT OWN
         return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.sensor, sample.policies.defaultEntity);
     }, chainError).then(function(decision) {
-        if(decision.result !== false)
+        if(decision.grant !== false)
             return Promise.reject(new Error("ERROR: Write from user to sensor name should be forbidden but is allowed: ",decision));
         else
             console.log("Success: Write from user to sensor name not granted");
@@ -206,8 +208,8 @@ upfront.init(settings)
         // ADMIN SETS NAME OF SENSOR HE OWNS
         return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.sensor, sample.policies.defaultEntity);
     }, chainError).then(function(decision) {
-        if(decision.result !== true)
-            return Promise.reject(new Error("ERROR: Write from admin to sensor name should be allowed but is forbidden: ",decision));
+        if(decision.grant !== true)
+            return Promise.reject(new Error("ERROR: Write from admin to sensor name should be allowed but is forbidden: " + JSON.stringify(decision)));
         else
             console.log("Success: Write from admin to sensor name granted");
         
@@ -232,7 +234,7 @@ upfront.init(settings)
         // USER SETS NAME OF CLIENT HE DOES NOT OWN
         return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.client, sample.policies.defaultEntity);
     }, chainError).then(function(decision) {
-        if(decision.result !== false)
+        if(decision.grant !== false)
             return Promise.reject(new Error("ERROR: Write from user to client name should be forbidden but is allowed: ", decision));
         else
             console.log("Success: Write from user to client name not granted");
@@ -240,7 +242,7 @@ upfront.init(settings)
         // ADMIN SETS NAME OF CLIENT HE OWNS
         return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.client, sample.policies.defaultEntity);
     }, chainError).then(function(decision) {
-        if(decision.result !== true)
+        if(decision.grant !== true)
             return Promise.reject(new Error("ERROR: Write from admin to client name should be allowed but is forbidden: ", decision));
         else
             console.log("Success: Write from admin to client name granted");
@@ -295,4 +297,3 @@ upfront.init(settings)
         else
             console.log("ERROR: "+reason);
     });
-
