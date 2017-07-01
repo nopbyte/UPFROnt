@@ -128,7 +128,7 @@ function _getProperty(policyObject, _property) {
 
 function setProperty(id, property, policy, release) {
     return new Promise(function(resolve, reject) {
-        var mutex = locks[id];
+        var mutex = getLock(id);
         mutex.lock(function() {
             storage.get(id).then(function(entry) {
                 if(entry) {
