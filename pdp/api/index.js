@@ -52,10 +52,11 @@ function checkArgs(subject, subjectPolicy, object, objectPolicy, method) {
 };
 
 function checkRead(subject, subjectPolicy, object, objectPolicy) {
-    w.debug("PDP.api.checkRead");
+    w.debug("UPFROnt.pdp.api.checkRead");
+
     return new Promise(function(resolve, reject) {
         if(pap === null)
-            reject("ERROR: PDP.api.checkRead: PAP is not available. Init PDP before using it.");
+            reject(new Error("PDP.api.checkRead: PAP is not available. Init PDP before using it."));
         else {
             checkArgs(subject, subjectPolicy, object, objectPolicy, "checkRead").then(function(args) {
                 if(!args.withPo)
@@ -97,31 +98,34 @@ function checkWrite(subject, subjectPolicy, object, objectPolicy) {
 };
 
 function checkReadWoPo(subject, object, property) {
-    console.log("PDP: checkReadWoPo("+JSON.stringify(subject)+", "+JSON.stringify(object)+", "+JSON.stringify(property)+")");
+    w.debug("UPFROnt.pdp.api.checkReadWoPo("+JSON.stringify(subject)+", "+JSON.stringify(object)+", "+JSON.stringify(property)+")");
     return new Promise(function(resolve, reject) {
         // fetch policyobjects for subject and object
         pap.get(subject.id).then(function(sp) {
             pap.get(object.id, property).then(function(op) {
                 if(sp && op) {
+                    w.debug("UPFROnt.pdp.api.checkReadWoPo: Got policies for subject and object!");
                     checkReadWithPo(subject, sp, object, op).then(function(r) {
                         resolve(r);
                     }, function(e) {
                         reject(e);
                     });
                 } else {
-                    resolve(false);
+                    w.debug("UPFROnt.pdp.api.checkReadWoPo: Unable to retrieve policies for subject or object!");
+                    resolve({ grant: false, cond: false });
                 }
             }, function(e) {
-                reject("ERROR: PDP.api.checkRead: Unable to retrieve policy for object entity");
+                reject(new Error("UPFROnt.pdp.api.checkRead: Unable to retrieve policy for object entity"));
             })
         }, function(e) {
+            w.debug("UPFROnt.pdp.api.checkReadWoPo: Unable to retrieve policy for subject entity: "+e);
             reject("ERROR: PDP.api.checkRead: Unable to retrieve policy for subject entity: "+e);
         });
     });
 };
 
 function checkWriteWoPo(subject, object, property) {
-    console.log("PDP: checkWriteWoPo("+JSON.stringify(subject)+", "+JSON.stringify(object)+", "+JSON.stringify(property)+")");
+    w.debug("UPFROnt.pdp.checkWriteWoPo("+JSON.stringify(subject)+", "+JSON.stringify(object)+", "+JSON.stringify(property)+")");
     return new Promise(function(resolve, reject) {
         // fetch policyobjects for subject and object
         pap.get(subject.id).then(function(sp) {
@@ -133,7 +137,7 @@ function checkWriteWoPo(subject, object, property) {
                         reject(e);
                     });
                 } else {
-                    resolve(false);
+                    resolve({ grant: false, cond: false });
                 }
             }, function(e) {
                 reject("ERROR: PDP.api.checkRead: Unable to retrieve policy for object entity");
@@ -145,6 +149,7 @@ function checkWriteWoPo(subject, object, property) {
 };
 
 function checkReadWithPo(subject, subjectPolicy, object, objectPolicy) {
+    w.debug("UPFROnt.pdp.checkReadWithPo");
     try {
         if(!(subjectPolicy instanceof Policy))
             subjectPolicy = new Policy(subjectPolicy);
@@ -158,10 +163,10 @@ function checkReadWithPo(subject, subjectPolicy, object, objectPolicy) {
 
     // TODO: check whether this type exists in Entity
     if(!valid(subject) || !valid(subject.type))
-        return Promise.reject(new Error("PDP ERROR: Subject must specify a valid Entity type."));
+        return Promise.reject(new Error("Subject must specify a valid Entity type."));
     
     if(!valid(object) || !valid(object.type))
-        return Promise.reject(new Error("PDP ERROR: Object must specify a valid Entity type."));
+        return Promise.reject(new Error("Object must specify a valid Entity type."));
     
     var subjectInfo = {
         type : subject.type,
@@ -174,11 +179,13 @@ function checkReadWithPo(subject, subjectPolicy, object, objectPolicy) {
     }
     
     var context = new Context(subjectInfo, objectInfo);
+    w.debug("UPFROnt.pdp.checkReadWithPo: Context: ", context);
 
     return objectPolicy.checkRead(subjectPolicy, context);
 }
 
 function checkWriteWithPo(subject, subjectPolicy, object, objectPolicy) {
+    w.debug("UPFROnt.pdp.checkReadWithPo");
     try {
         if(!(subjectPolicy instanceof Policy))
             subjectPolicy = new Policy(subjectPolicy);
