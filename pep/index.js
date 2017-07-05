@@ -46,7 +46,7 @@ function isValid(o) {
  *
  */
 function declassify(object, objPolicyRecord, target, targetPolicy) {
-    w.debug("PEP.declassify");
+    w.debug("UPFROnt.pep.declassify");
     
     if(!isValid(object))
         return Promise.reject(new Error("Unable to declassify invalid object"));
@@ -72,13 +72,14 @@ function declassify(object, objPolicyRecord, target, targetPolicy) {
             
             return declassifyRec(clone(object), clone(object), objPolicyRecord, target, targetPolicy, effPolicy);
         } catch(e) {
-            console.log("ERROR: PEP.declassify: Unable to create Policy");
-            return Promise.reject(e);
+            var err = new Error("UPFROnt.pep.declassify: Unable to create Policy: " + e);
+            w.error(err);
+            return Promise.reject(err);
         }
     } else {
         return new Promise(function(resolve, reject) { 
             pap.getFullRecord(object.id).then(function(opr) {
-                pap.get(target.id).then(function(tp) {                   
+                pap.get(target.id).then(function(tp) {
                     declassifyRec(clone(object), clone(object), opr, target, tp, effPolicy).then(function(filteredObject) {
                         resolve(filteredObject);
                     }, function(e) {
@@ -97,14 +98,14 @@ function declassify(object, objPolicyRecord, target, targetPolicy) {
 function genCheckReadPromise(property, object, target, targetPolicy, objInfo, effPolicy) {
     return new Promise(function(resolve, reject) {
         pdp.checkRead(target, targetPolicy, objInfo, effPolicy).then(function(decision) {
-            if(decision.result) {
+            if(decision.grant) {
                 // TODO: apply policy action here
                 resolve({ prop: property, value: object[property]});
             } else {
-                resolve({ prop: property, value: undefined });
+                resolve({ prop: property });
             }
         }, function(e) {
-            console.log("ERROR: PEP is unable to declassify property '"+property+"': ", e);
+            w.error("PEP is unable to declassify property '"+property+"': ", e);
             reject(e)
         });
     });
@@ -113,9 +114,12 @@ function genCheckReadPromise(property, object, target, targetPolicy, objInfo, ef
 function genDeclassifyPromise(property, object, policyObject, target, targetPolicy, objInfo, effPolicy) {
     return new Promise(function(resolve, reject) {
         declassifyRec(objInfo, object, policyObject, target, targetPolicy, effPolicy).then(function(o) {
-            resolve({ prop: property, value: o});
+            if(Object.keys(o).length > 0)
+                resolve({ prop: property, value: o});
+            else
+                resolve({ prop: property });
         }, function(e) {
-            console.log("ERROR: PEP is unable to declassify object '"+property+"': ", e);
+            w.error("PEP is unable to declassify object '"+property+"': ", e);
             reject(e)
         });
     });
@@ -161,8 +165,8 @@ function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effP
             
             Promise.all(promises).then(function(values) {
                 for(var i in values) {
-                    // console.log("prop: "+values[i].prop+", value: "+JSON.stringify(values[i].value));
-                    filtered[values[i].prop] = values[i].value;
+                    if(values[i].value !== undefined)
+                        filtered[values[i].prop] = values[i].value;
                 }
                 resolve(filtered);
             }, function(reason) {              
