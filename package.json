@@ -20,7 +20,7 @@
         "Access Control Framework"
     ],
     "dependencies": {
-        "body-parser": "^1.17.0",
+        "body-parser": "^1.17.2",
         "bluebird": "*",
         "clone": "^2.1.0",
         "cluster": "^0.7.7",
