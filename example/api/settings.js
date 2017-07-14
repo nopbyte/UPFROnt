@@ -13,6 +13,10 @@ module.exports = {
                 "/prop"   :  6,
                 "/var"    :  6,
             },
+            opTypes: {
+                write: 0,
+                read: 1
+            },
             locks: "Locks/",
             actions: "Actions"
         }
@@ -23,13 +27,13 @@ module.exports = {
         // if specified, the module runs as a PAP server
         // if undefined, the module runs as a PAP client
         // accessing another PAP server
-        server: {
+        /*server: {
             "host": "localhost",
             port: 1234,
             path: "/pap/",
             tls: false,
             cluster: 1
-        },
+        },*/
         // storage specifies where the policies
         // are stored persistently:
         // 1. if policies are stored remotely

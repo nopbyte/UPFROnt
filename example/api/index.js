@@ -40,8 +40,8 @@ upfront.init(settings)
         return Promise.reject(e);
     })
     .then(function(v) {
-        for(var i = 0; i < 5; i++)
-            console.log("values["+i+"]: " + v[i]);
+        // for(var i = 0; i < 5; i++)
+        // console.log("values["+i+"]: " + v[i]);
         
         if(!v[0] || !v[0].eq(sample.policies.defaultActor) ||
            !v[1] || !v[1].eq(sample.policies.defaultActor) ||
@@ -80,8 +80,8 @@ upfront.init(settings)
         return Promise.reject(e);
     })
     .then(function(v) {
-        for(var i = 0; i < 12; i++)
-            console.log("values["+i+"]: ", v[i]);
+        // for(var i = 0; i < 12; i++)
+        // console.log("values["+i+"]: ", v[i]);
         
         var retrieve = [];
         retrieve.push(pap.get(sample.entities.user.id, ""));
@@ -104,8 +104,8 @@ upfront.init(settings)
         
         return Promise.all(retrieve);
     }, chainError).then(function(values) {
-        for(var i = 0; i < 12; i++)
-            console.log("values["+i+"]: ", values[i]);
+        // for(var i = 0; i < 12; i++)
+        // console.log("values["+i+"]: ", values[i]);
             
         if(!values[0].eq(sample.policies.defaultEntity) ||
            !values[1].eq(sample.policies.defaultEntity) ||
@@ -130,7 +130,7 @@ upfront.init(settings)
            !values[11].eq(sample.policies.defaultRole))
             return Promise.reject(new Error("default entity policy modified during creation or retrieval"));
 
-        console.log("storing and retrieval works, testing policy decisions now");
+        // console.log("storing and retrieval works, testing policy decisions now");
         
         return Promise.resolve();
     }, chainError).then(function() {
@@ -142,7 +142,7 @@ upfront.init(settings)
         var p = pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
         return p;
     }, chainError).then(function(decision) {
-        console.log("decision: ", decision);
+        // console.log("decision: ", decision);
         
         if(decision.grant !== false)
             return Promise.reject(new Error("ERROR: Write from user to admin password should be forbidden but is allowed: ",decision));
@@ -223,7 +223,7 @@ upfront.init(settings)
         // DECLASSIFY SENSOR RECORD SENT TO USER
         return pep.declassify(sample.entities.sensor, sample.entities.user);
     }, chainError).then(function(filteredObject) {
-        if(filteredObject.credentials.length != 4 &&
+        if(filteredObject.credentials.length != 3 &&
            (filteredObject.credentials[0] !== null || filteredObject.credentials[3] !== null))
                 return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
@@ -290,7 +290,7 @@ upfront.init(settings)
         else
             console.log("Success: Entity can only be deleted once.");
 
-        return Promise.resolve();
+        return upfront.finish();
     }, chainError).catch(function(reason) {
         if(reason && reason.stack !== undefined)
             console.log(reason.stack);
