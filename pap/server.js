@@ -2,6 +2,8 @@ var bodyParser = require('body-parser');
 var express = require('express');
 var path = require('path');
 
+var papApp = require("./app.js");
+
 function Server(settings) {
     this.settings = settings;
     this.useCluster = false;
@@ -16,6 +18,8 @@ Server.prototype.init = function(initFunction) {
 
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({extended: true}));
+
+    this.app.use(this.settings.path, papApp.init());
 
     if(this.settings && this.settings.cluster && this.settings.cluster > 1) {
         this.cluster = require('cluster');
@@ -83,6 +87,11 @@ Server.prototype.init = function(initFunction) {
                 f(resolve, reject);
             });
     }
+};
+
+Server.prototype.finish = function() {
+    this.server.close();
+    return Promise.resolve();
 };
 
 function getListenPath(settings) {

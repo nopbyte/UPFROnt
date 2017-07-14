@@ -149,7 +149,7 @@ function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effP
                     // TODO: p is inside a loop => correct as it changes in the promise while looping
                     // translate into function call => only way to avoid the same variable scope!
 
-                    if(!curOPol.properties || !curOPol.properties.hasOwnProperty(p) || curOPol.properties[p].self == null)
+                    if(!curOPol.properties || !curOPol.properties.hasOwnProperty(p) || curOPol.properties[p].self === null)
                         promise = genCheckReadPromise(p, object, target, targetPolicy, objInfo, effPolicy);
                     else 
                         promise = genCheckReadPromise(p, object, target, targetPolicy, objInfo, curOPol.properties[p].self);
