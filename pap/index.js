@@ -3,14 +3,16 @@ var express = require('express');
 var w = require('winston');
 w.level = process.env.LOG_LEVEL;
 
+var Promise = require("bluebird");
+
 var Storage = require('./storage');
 
 var api = require('./api');
 var app = require('./app.js');
 
-var settings = {};
-var server = null;
+var initialized = false;
 
+// TODO: Fix this with default settings file
 var defaultSettings = {
     storage: {
         type: "mongodb",
@@ -36,32 +38,11 @@ var defaultSettings = {
     }
 }
 
-function getServerInit(userSettings, server) {
-    return function() {
-        return new Promise(function(resolve, reject) {
-            Storage.init(userSettings.storage, userSettings.server.cluster).then(function(fresh) {
-                api.init(userSettings, Storage);
-                resolve(fresh);
-            }, function(e) {
-                w.error("Unable to initialize storage module");
-                reject(e);
-            });
-        });
-    };
-}
-
-function finish() {
+function stop() {
     return new Promise(function(resolve, reject) {
-        api.finish().then(function() {
-            Storage.finish().then(function(r) {
-                if(server !== null)
-                    server.finish().then(function(r) {
-                        resolve(r);
-                    }, function(e) {
-                        reject(e);
-                    })
-                else
-                    resolve(r);
+        api.stop().then(function() {
+            Storage.stop().then(function(r) {
+                resolve(r);
             }, function(e) {
                 reject(e);
             });
@@ -71,43 +52,39 @@ function finish() {
     });
 }
 
-function init(userSettings) {
-    if(!userSettings)
-        userSettings = defaultSettings;
+function init(settings) {
+    if(initialized) {
+        // console.log(process.pid + ": PAP has already been initialized. Skip");
+        return Promise.resolve(this);
+    } else {
+        // console.log(process.pid + ": Init PAP.");
+        initialized = true;
+    }
+
+    var cluster = 1;
+    if(settings && settings.server && settings.server.cluster > 1)
+        cluster = settings.server.cluster;
+
     return new Promise(function(resolve, reject) {
-        if(!userSettings.server) {
-            Storage.init(userSettings.storage, false).then(function(fresh) {
-                api.init(userSettings, Storage);
-                resolve(fresh);
-            }, function(e) {
-                reject(new Error("Unable to communicate to policy store. "+e));
-            });
-        } else {
-            var Server = require('./server');
-            
-            server = new Server(userSettings.server);
-            server.init(getServerInit(userSettings, server)).then(function(workers) {
-                if(workers) {
-                    w.info("PAP Cluster is ready to receive requests.");
-                    resolve();
-                }
+        Storage.init(settings.pap.storage, cluster).then(function(fresh) {
+            api.init(settings, Storage).then(function() {
+                resolve(this);
             }, function(e) {
                 reject(e);
             });
-        }
+        }, function(e) {
+            reject(new Error("Unable to communicate to policy store. "+e));
+        });
     });
 };
 
-// TODO: disable get, set, del if PAP runs as server
-
 module.exports = {
     init: init,
-    finish: finish,
+    stop: stop,
+    
     get: api.get,
     set: api.set,
     del: api.del,
 
-    getFullRecord: api.getFullRecord,
-
-    get app() { if(server) return server.app; else return app.init(); }
+    getFullRecord: api.getFullRecord
 };
