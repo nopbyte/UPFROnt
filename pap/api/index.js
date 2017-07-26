@@ -1,11 +1,12 @@
 var clone = require('clone');
 var Promise = require('bluebird');
-var Locks = require("locks");
-
 var w = require("winston");
 w.level = process.env.LOG_LEVEL;
 
-var Policy = require('ULocks').Policy;
+var ulocks = require('ULocks');
+var Policy = ulocks.Policy;
+
+var mutex = require("./mutex");
 
 var storage = null;
 var locks = {}
@@ -17,17 +18,19 @@ var emptyEntry = {
 
 function init(settings, _storage) {
     storage = _storage;
+
+    return mutex.init(settings);
 }
 
-function finish() {
+function stop() {
     return Promise.resolve();
 }
 
 function get(id, property) {
-    if(!storage)
-        return Promise.reject("ERROR: PAP API has not been initialized before use.");
+    if(storage === null)
+        return Promise.reject(new Error("PAP API has not been initialized before use."));
     if(id === undefined)
-        return Promise.reject("ERROR: PAP api.get(...): Missing valid identifier to call get.");
+        return Promise.reject(new Error("PAP api.get(...): Missing valid identifier to call get."));
 
     if(property === undefined)
         return getEntity(id);
@@ -37,13 +40,13 @@ function get(id, property) {
 
 function set(id, property, policy) {    
     if(storage === null)
-        return Promise.reject("ERROR: PAP API has not been initialized before use.");
+        return Promise.reject(new Error("PAP API has not been initialized before use."));
     else if(id === undefined)
-        return Promise.reject("ERROR: PAP api.set(...): Missing valid identifier to call set.");
+        return Promise.reject(new Error("PAP api.set(...): Missing valid identifier to call set."));
     else if(property === undefined && policy === undefined || (typeof(property) === "string" && policy === undefined))
-        return Promise.reject("ERROR: PAP api.set(...): Missing valid policy to call set.");
+        return Promise.reject(new Error("PAP api.set(...): Missing valid policy to call set."));
     else if(typeof(property) !== "string" && policy !== undefined)
-        return Promise.reject("ERROR: PAP api.set(...): Property in set must be a string.");
+        return Promise.reject(new Error("PAP api.set(...): Property in set must be a string."));
 
     if(property !== undefined && policy === undefined)
         return setEntity(id, property);
@@ -53,21 +56,15 @@ function set(id, property, policy) {
 
 function del(id, property) {
     if(storage === null)
-        return Promise.reject("ERROR: PAP API has not been initialized before use.");
+        return Promise.reject(new Error("PAP API has not been initialized before use."));
     else if(id === undefined)
-        return Promise.reject("ERROR: Storage.del(...): Missing valid identifier to call del.");
+        return Promise.reject(new Error("Storage.del(...): Missing valid identifier to call del."));
     else {
         if(property === undefined)
             return delEntity(id)
         else
             return delProperty(id, property);
     }
-};
-
-function getLock(id) {
-    if(!locks.hasOwnProperty(id))
-        locks[id] = Locks.createMutex();
-    return locks[id];
 };
 
 // TODO: Check for errors during policy creation
@@ -128,28 +125,27 @@ function _getProperty(policyObject, _property) {
 
 function setProperty(id, property, policy, release) {
     return new Promise(function(resolve, reject) {
-        var mutex = getLock(id);
-        mutex.lock(function() {
+        mutex.lock(id).then(function() {
             storage.get(id).then(function(entry) {
                 if(entry) {
                     var pO = entry.pO;
                     var p = _setProperty(pO, property, policy);
                     storage.set(id, p).then(function() {
                         resolve(p);
-                        mutex.unlock();
+                        mutex.unlock(id);
                     }, function(e) {
                         // Unable to update policy backend
                         reject(e);
-                        mutex.unlock();
+                        mutex.unlock(id);
                     });
                 } else {
                     resolve(null);
-                    mutex.unlock();
+                    mutex.unlock(id);
                 }
             }, function(e) {
                 // Unable to find policy Object for entity
                 reject(e);
-                mutex.unlock();
+                mutex.unlock(id);
             });
         });
     });
@@ -184,25 +180,23 @@ function _setProperty(pol, property, policy) {
 
 function delProperty(id, property) {
     return new Promise(function(resolve, reject) {
-        var mutex = getLock(id);
-        
-        mutex.lock(function() {
+        mutex.lock(id).then(function() {
             storage.get(id).then(function(entry) {
                 if(entry) {
                     var pO = entry.pO;
                     var p = _delProperty(pO, property);
                     storage.set(id, p).then(function(r) {
                         resolve(r);
-                        mutex.unlock();
+                        mutex.unlock(id);
                     }, function(e) {
                         w.error("PAP.api.delProperty is unable to delete property in entity with id '"+id+"'");
                         // Unable to update policy backend
                         reject(e);
-                        mutex.unlock();
+                        mutex.unlock(id);
                     });
                 } else {
                     resolve(null);
-                    mutex.unlock();
+                    mutex.unlock(id);
                 }
             });
         });
@@ -253,8 +247,7 @@ function getEntity(id) {
 
 function setEntity(id, policy) {
     return new Promise(function (resolve, reject) {
-        var mutex = getLock(id);
-        mutex.lock(function() {
+        mutex.lock(id).then(function() {
             storage.get(id).then(function(entry) {
                 var pO = null;
                 if(entry === null) {
@@ -270,14 +263,14 @@ function setEntity(id, policy) {
                 _setEntity(id, pO, policy).then(function(p) {
                     storage.set(id, p).then(function() {
                         resolve(p);
-                        mutex.unlock();
+                        mutex.unlock(id);
                     }, function(e) {
                         reject(e);
-                        mutex.unlock();
+                        mutex.unlock(id);
                     });
                 }, function(e) {
                     reject(e);
-                    mutex.unlock();
+                    mutex.unlock(id);
                 });
             });
         });
@@ -303,20 +296,18 @@ function _setEntity(id, pO, policy) {
 
 function delEntity(id) {
     return new Promise(function(resolve, reject) {
-        var mutex = getLock(id);
-
-        mutex.lock(function() {
+        mutex.lock(id).then(function() {
             storage.del(id).then(function(entry) {
                 if(entry) {
                     resolve(entry.pO);
-                    mutex.unlock();
+                    mutex.unlock(id);
                 } else {
                     resolve(null);
-                    mutex.unlock();
+                    mutex.unlock(id);
                 }
             }, function(e) {
                 reject(e);
-                mutex.unlock();
+                mutex.unlock(id);
             });
         });
     });
@@ -343,7 +334,7 @@ function getFullRecord(id) {
 
 module.exports = {
     init: init,
-    finish: finish,
+    stop: stop,
     get: get,
     set: set,
     del: del,
