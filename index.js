@@ -1,37 +1,34 @@
-var pdp = require('./pdp');
 var w = require('winston');
-w.level = process.env.LOG_SERVER ? process.env.LOG_SERVER : "info";
+w.level = process.env.LOG_LEVEL;
 
-// TODO: Check for correct settings in pdp etc...
+var api = require('./api');
+var server = require('./server');
+var runsServer = false;
+
 function init(settings) {
-    return new Promise(function(resolve, reject) {
-        pdp.init(settings).then(function(fresh) {
-            if(!fresh)
-                w.warn("UPFROnt had already been initialized. Additional initialization has been skipped.");
-            else
-                w.info("UPFROnt initialized successfully.");
-
-            resolve();
-        }, function(e) {
-            reject(e);
-        });
-    });
+    if(settings.server !== undefined) {
+        runsServer = true;
+        return server.init(settings);
+    } else
+        return api.init(settings);
 }
 
-function finish() {
-    return new Promise(function(resolve, reject) {
-        pdp.finish().then(function() {
-            resolve();
+function stop() {
+    if(runsServer)
+        return server.stop().then(function() {
+            return Promise.resolve();
         }, function(e) {
-            reject(e);
+            return Promise.reject(e);
         });
-    });
+    else
+        return api.stop();
 }
 
 module.exports = {
     init: init,
-    finish: finish,
-    pep: require("./pep"),
-    pdp: pdp,
-    pap: pdp.pap
+    stop: stop,
+    
+    pep: api.pep,
+    pdp: api.pdp,
+    pap: api.pap
 }
