@@ -315,9 +315,9 @@ function delEntity(id) {
 
 function getFullRecord(id) {
     if(!storage)
-        return Promise.reject("ERROR: PAP API has not been initialized before use.");
+        return Promise.reject(new Error("PAP API has not been initialized before use."));
     if(id === undefined)
-        return Promise.reject("ERROR: PAP api.getFullRecord(...): Missing valid identifier to call getFullRecord.");
+        return Promise.reject(new Error("PAP api.getFullRecord(...): Missing valid identifier to call getFullRecord."));
 
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
