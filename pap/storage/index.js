@@ -13,8 +13,10 @@ var dbModule = null;
 
 function init(settings, cluster) {
     return new Promise(function(resolve, reject) {
+        w.debug("Init PAP storage module.");
+        
         if(dbModule !== null) {
-            w.warn("PAP storage module has already been initialized before. Skip this initialization");
+            w.warn("PAP storage module has been initialized before. Skip this initialization.");
             resolve(false);
             return;
         }
@@ -31,10 +33,18 @@ function init(settings, cluster) {
             } else {
                 try {
                     if(settings.type ==="external" && settings.module_name){
-                       dbModule = require(settings.module_name);
+                        try {
+                            dbModule = require(settings.module_name);
+                        } catch(e) {
+                            reject(e);
+                        }
                     }
                     else{
-                      dbModule = require("./modules/"+settings.type);
+                        try {
+                            dbModule = require("./modules/"+settings.type);
+                        } catch(e) {
+                            reject(e);
+                        }
                     }
                 } catch(e) {
                     w.error("Unable to load database module '"+settings.type+"'. " + e);
@@ -42,7 +52,12 @@ function init(settings, cluster) {
                     return;
                 };
 
+                /* console.log("cluster: ", cluster);
+                console.log("settings: ", settings);
+                console.log("dbModule: ", dbModule);*/ 
+
                 dbModule.init(settings).then(function() {
+
                     if(settings.cache && settings.cache.enabled) {
                         policyCache = new NodeCache({
                             stdTTL: settings.cache.TTL || 600,
@@ -52,17 +67,17 @@ function init(settings, cluster) {
                         });
 
                         if(!settings.cache.sync && cluster > 1) {
-                            reject("ERROR: PAP is misconfigured. Configuration specifies cache without a sync module for cache synchronisation!");
+                            reject(new Error("PAP is misconfigured. Configuration specifies cache without a sync module for cache synchronisation!"));
                             return;
                         }
-
+                        
                         if(cluster > 1) {
                             w.info("PAP storage connects to synchronisation server");
                             try {
                                 // TODO: change such that it can also be loaded from an arbitrary directory
                                 syncModule = require("./modules/"+settings.cache.sync.type);
                             } catch(e) {
-                                reject(new Error("PAP is unable to load synchronization module for cache synching in cluster!"));
+                                reject(new Error("PAP is unable to load synchronization module for cache synching in cluster! "+ e));
                                 w.error("PAP is unable to load synchronization module for cache synching in cluster!");
                                 return;
                             }
@@ -95,11 +110,11 @@ function init(settings, cluster) {
     });
 };
 
-function finish() {
+function stop() {
     if(dbModule === null)
-        return Promise.reject(new ERROR("Cannot close connection of storage module which has not been initialized."));
+        return Promise.reject(new Error("Cannot close connection of storage module which has not been initialized."));
     
-    return dbModule.finish();
+    return dbModule.stop();
 }
 
 function get(id) {
@@ -194,7 +209,7 @@ function del(id) {
 
 module.exports = {
     init : init,
-    finish: finish,
+    stop: stop,
     get  : get,
     set  : set,
     del  : del

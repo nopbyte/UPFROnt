@@ -20,7 +20,7 @@ function init(settings) {
     return new Promise(function(resolve, reject) {
         try {
             MongoClient.connect(dbURL, function(error, db) {
-                if(error) {
+                if(error !== null) {
                     reject(error);
                 } else {
                     dbHandle = db;
@@ -40,7 +40,7 @@ function init(settings) {
     });
 };
 
-function finish() {
+function stop() {
     return new Promise(function(resolve, reject) {
         dbHandle.close(function(error, result) {
             if(error !== null)
@@ -116,7 +116,7 @@ function del(id) {
 
 module.exports = {
     init: init,
-    finish: finish,
+    stop: stop,
 
     create: create,
     update: update,

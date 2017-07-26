@@ -1,5 +1,5 @@
 var redis = require("redis");
-var Mutex = require("node-mutex");
+var Mutex = require("redislock");
 var w = require('winston');
 
 w.level = process.env.LOG_LEVEL;
@@ -11,6 +11,8 @@ var settings = null;
 
 var pub = null; 
 var sub = null;
+var redisClient = null;
+var locks = {};
 
 // TODO: check what publish and subscribe return if not promissified
 // TODO: include redis settings (host, port, ...)
@@ -21,6 +23,7 @@ function init(_settings, handle) {
 
         pub = redis.createClient();
         sub = redis.createClient();
+        mutexClient = redis.createClient();
         
         pub.on('error', function(err) {
             w.error("Problem while connecting publisher to redis!");
@@ -52,10 +55,24 @@ function init(_settings, handle) {
 }
 
 function lock(id) {
-    if(locks.hasOwnProperty(id))
-        locks[id] = Mutex();
+    if(!locks.hasOwnProperty(id)) {
+        // locks[id] = Mutex();
+        locks[id] = Mutex.createLock(mutexClient, { timeOut: 50000, retries: -1, delay: 50 })
+    }
     
-    return locks[id].lock(id);
+    return locks[id].acquire(id).then(function() {
+        console.log(process.pid + ": OHOH LOCK '"+id+"'");
+        return Promise.resolve(function() { console.log(process.pid + ": OHOH UNLOCK LOCK '"+id+"'"); locks[id].release() } );
+    }, function(e) {
+        console.log(process.pid + ": OHOH: Unable to get lock for '"+id+"'. Error: "+e+". Try again.");
+        return Promise.delay(100).then(function() {
+            return lock(id);
+        });
+        // return Promise.resolve
+        // reject();
+    });
+    
+    // return locks[id];
 }
 
 function mark(message) {
