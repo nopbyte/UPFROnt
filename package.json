@@ -4,6 +4,9 @@
     "description": "ULock Policy FRamewOrk",
     "homepage": "https://github.com/SEDARI/UPFROnt/wiki",
     "license": "MIT",
+    "scripts": {
+        "start": "node upfront.js"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/SEDARI/UPFROnt.git"
