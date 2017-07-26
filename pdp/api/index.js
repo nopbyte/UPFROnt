@@ -51,7 +51,7 @@ function checkArgs(subject, subjectPolicy, object, objectPolicy, method) {
 };
 
 function checkAccess(subject, subjectPolicy, object, objectPolicy, operation) {
-    w.debug("UPFROnt.pdp.api.checkAccess");
+    w.debug("UPFROnt.pdp.api.checkAccess(op: "+operation+")");
 
     return new Promise(function(resolve, reject) {
         if(pap === null)
@@ -232,8 +232,7 @@ function checkAccessWithPo(subject, subjectPolicy, object, objectPolicy, operati
     }
     
     var context = new Context(subjectInfo, objectInfo);
-    console.log("operation: ", operation);
-    return objectPolicy.checkAccess(subjectPolicy, operation, context);
+    return objectPolicy.checkAccess(subjectPolicy, context, operation);
 };
 
 
