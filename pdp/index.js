@@ -1,19 +1,28 @@
 var api = require('./api');
 var pap = require('../pap');
 
-// TODO: Check how to share app with PAP
-function init(settings) {
-    return new Promise(function(resolve, reject) {
-        pap.init(settings.pap).then(function() {
-            api.init(settings.pdp, pap).then(function(fresh) {
-                resolve(fresh);
-            }, function(e) {
-                reject(e);
-            });
-        }, function(e) {
-            reject(e);
-        });
-    });
+var Promise = require("bluebird");
+
+var initialized = false;
+
+function init(settings, _pap) {
+    if(initialized) {
+        // console.log(process.pid + ": PDP has already been initialized. Skip");
+        return Promise.resolve(this);
+    } else {
+        // console.log(process.pid + ": Init PDP.");
+        initialized = true;
+    }
+
+    if(_pap === undefined) {
+        // console.log("PDP init WO PAP");
+        return pap.init(settings).
+            then(api.init.bind(null, settings, pap));
+    } else {
+        // console.log("PDP init WITH PAP");
+        api.init(settings, _pap)
+        return Promise.resolve(this);
+    }
 }
 
 function finish() {
@@ -33,7 +42,8 @@ function finish() {
 module.exports = {
     init: init,
     finish: finish,
-    checkRead : api.checkRead,
-    checkWrite : api.checkWrite,
+    checkRead: api.checkRead,
+    checkWrite: api.checkWrite,
+    checkAccess: api.checkAccess,
     pap: pap
 }
