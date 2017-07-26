@@ -17,15 +17,16 @@ function init() {
     app.use(bodyParser.urlencoded({extended: true}));
     app.use(errorHandler);      
     
-    app.get("/:id", function(req, res, next) { console.log("---GET---"); next(); }, get);
+    app.get("/:id", get);
+    app.get("/:id/full", getFull);
     app.get("/:id/prop/:property?", getProp);
     app.put("/:id", set);
     app.put("/:id/prop/:property?", setProp);
     app.delete("/:id", del);
     app.delete("/:id/prop/:property?", delProp);
 
-    // app.get("/locksInfo", getLocksInfo);
-
+    console.log("PAP APP initialized");
+    
     return app;
 }
 
@@ -33,6 +34,17 @@ function get(req, res) {
     var id = req.params.id;
     
     pap.get(id).then(function(p) {
+        res.status(200).json(p).end();
+    }, function(e) {
+        console.log(e);
+        res.status(403).json({ err: e }).end();
+    });
+}
+
+function getFull(req, res) {
+    var id = req.params.id;
+    
+    pap.getFullRecord(id).then(function(p) {
         res.status(200).json(p).end();
     }, function(e) {
         console.log(e);
@@ -55,7 +67,7 @@ function getProp(req, res) {
     });
 }
 
-function set(req, res, policy) {
+function set(req, res) {
     var id = req.params.id;
     var policy = req.body;
     
@@ -67,7 +79,7 @@ function set(req, res, policy) {
     });
 }
 
-function setProp(req, res, policy) {
+function setProp(req, res) {
     var id = req.params.id;
     var property = req.params.property;
     var policy = req.body;
