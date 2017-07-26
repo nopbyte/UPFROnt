@@ -1,0 +1,238 @@
+
+Use a cluster. This is the master
+Launching 8 cluster workers
+19480: Init PAP.
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+19474: Init PAP.
+19480: Init PDP.
+PDP init WITH PAP
+19480: Init PEP.
+INIT PEP WITH PDP
+CONNECTED ... 
+Mongo3
+PAP APP initialized
+Launch single threaded server.
+19461: Init PAP.
+UPFront PAP instance (19480) is now running at http://localhost:1234/pap/
+19473: Init PAP.
+19467: Init PAP.
+19503: Init PAP.
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+19497: Init PAP.
+19474: Init PDP.
+PDP init WITH PAP
+19474: Init PEP.
+INIT PEP WITH PDP
+PAP APP initialized
+Launch single threaded server.
+CONNECTED ... 
+Mongo3
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+19467: Init PDP.
+PDP init WITH PAP
+19467: Init PEP.
+INIT PEP WITH PDP
+19486: Init PAP.
+PAP APP initialized
+Launch single threaded server.
+CONNECTED ... 
+Mongo3
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+19461: Init PDP.
+PDP init WITH PAP
+19461: Init PEP.
+INIT PEP WITH PDP
+19473: Init PDP.
+PDP init WITH PAP
+19473: Init PEP.
+INIT PEP WITH PDP
+19497: Init PDP.
+PDP init WITH PAP
+19497: Init PEP.
+INIT PEP WITH PDP
+PAP APP initialized
+Launch single threaded server.
+CONNECTED ... 
+Mongo3
+UPFront PAP instance (19474) is now running at http://localhost:1234/pap/
+PAP APP initialized
+Launch single threaded server.
+UPFront PAP instance (19467) is now running at http://localhost:1234/pap/
+PAP APP initialized
+CONNECTED ... 
+Mongo3
+Launch single threaded server.
+CONNECTED ... 
+Mongo3
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+19503: Init PDP.
+PDP init WITH PAP
+19503: Init PEP.
+INIT PEP WITH PDP
+Mongo1
+Mongo2.1:  mongodb://localhost:27017/pap-database
+UPFront PAP instance (19473) is now running at http://localhost:1234/pap/
+PAP APP initialized
+Launch single threaded server.
+UPFront PAP instance (19497) is now running at http://localhost:1234/pap/
+CONNECTED ... 
+Mongo3
+19486: Init PDP.
+PDP init WITH PAP
+19486: Init PEP.
+INIT PEP WITH PDP
+UPFront PAP instance (19461) is now running at http://localhost:1234/pap/
+CONNECTED ... 
+Mongo3
+PAP APP initialized
+Launch single threaded server.
+UPFront PAP instance (19503) is now running at http://localhost:1234/pap/
+UPFront PAP instance (19486) is now running at http://localhost:1234/pap/
+19474: LOCK on 'bob!@!agile-local'
+19497: LOCK on 'some_id_for_sensor2'
+19480: LOCK on 'alice!@!agile-local'
+19497: RELEASE LOCK 'some_id_for_sensor2'
+PUT /pap/some_id_for_sensor2 200 41.878 ms - 79
+19474: RELEASE LOCK 'bob!@!agile-local'
+19467: LOCK on 'some_id_for_sensor'
+19480: RELEASE LOCK 'alice!@!agile-local'
+19473: LOCK on 'some_id_for_client'
+PUT /pap/alice!@!agile-local 200 88.443 ms - 888
+PUT /pap/bob!@!agile-local 200 83.035 ms - 888
+19467: RELEASE LOCK 'some_id_for_sensor'
+19473: RELEASE LOCK 'some_id_for_client'
+PUT /pap/some_id_for_sensor 200 80.763 ms - 925
+PUT /pap/some_id_for_client 200 103.710 ms - 683
+GET /pap/some_id_for_client 200 13.445 ms - 40
+GET /pap/some_id_for_sensor2 200 4.123 ms - 40
+GET /pap/some_id_for_sensor 200 22.639 ms - 40
+GET /pap/bob!@!agile-local 200 47.134 ms - 40
+GET /pap/alice!@!agile-local 200 48.269 ms - 40
+19497: LOCK on 'alice!@!agile-local'
+19473: LOCK on 'bob!@!agile-local'
+19474: LOCK on 'some_id_for_sensor'
+19497: RELEASE LOCK 'alice!@!agile-local'
+PUT /pap/alice!@!agile-local/prop/ 200 54.681 ms - 888
+19497: LOCK on 'some_id_for_client'
+19474: RELEASE LOCK 'some_id_for_sensor'
+19497: RELEASE LOCK 'some_id_for_client'
+19467: LOCK on 'alice!@!agile-local'
+PUT /pap/some_id_for_client/prop/credentials 200 29.178 ms - 683
+PUT /pap/some_id_for_sensor/prop/ 200 60.795 ms - 925
+19474: WAIT ON LOCK 'some_id_for_sensor'
+19467: RELEASE LOCK 'alice!@!agile-local'
+PUT /pap/alice!@!agile-local/prop/role 200 79.862 ms - 888
+19473: RELEASE LOCK 'bob!@!agile-local'
+19461: LOCK on 'some_id_for_client'
+PUT /pap/bob!@!agile-local/prop/ 200 109.263 ms - 888
+19480: LOCK on 'bob!@!agile-local'
+19473: LOCK on 'some_id_for_sensor'
+19461: RELEASE LOCK 'some_id_for_client'
+19486: LOCK on 'alice!@!agile-local'
+PUT /pap/some_id_for_client/prop/ 200 46.482 ms - 683
+19473: RELEASE LOCK 'some_id_for_sensor'
+PUT /pap/some_id_for_sensor/prop/credentials 200 54.241 ms - 925
+19461: LOCK on 'some_id_for_sensor'
+19480: RELEASE LOCK 'bob!@!agile-local'
+PUT /pap/bob!@!agile-local/prop/role 200 160.423 ms - 888
+node_redis: Deprecated: The SET command contains a "undefined" argument.
+This is converted to a "undefined" string now and will return an error from v.3.0 on.
+Please handle this in your code to make sure everything works as you intended it to.
+19474: LOCK on 'undefined'
+19486: RELEASE LOCK 'alice!@!agile-local'
+PUT /pap/alice!@!agile-local/prop/password 200 91.417 ms - 888
+19461: RELEASE LOCK 'some_id_for_sensor'
+PUT /pap/some_id_for_sensor/prop/credentials[2].system 200 93.441 ms - 1168
+19474: RELEASE LOCK 'some_id_for_sensor'
+19503: LOCK on 'bob!@!agile-local'
+node_redis: Deprecated: The EVALSHA command contains a "undefined" argument.
+This is converted to a "undefined" string now and will return an error from v.3.0 on.
+Please handle this in your code to make sure everything works as you intended it to.
+PUT /pap/some_id_for_sensor/prop/credentials[1].system 200 168.719 ms - 925
+19503: RELEASE LOCK 'bob!@!agile-local'
+PUT /pap/bob!@!agile-local/prop/password 200 147.874 ms - 888
+GET /pap/alice!@!agile-local/prop/ 200 2.869 ms - 153
+GET /pap/bob!@!agile-local/prop/ 200 3.225 ms - 153
+GET /pap/bob!@!agile-local/prop/password 200 4.304 ms - 416
+GET /pap/some_id_for_sensor/prop/ 200 5.844 ms - 153
+GET /pap/alice!@!agile-local/prop/role 200 6.365 ms - 175
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}}]}
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}}]}
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}}]}
+GET /pap/bob!@!agile-local/prop/role 200 17.248 ms - 175
+body:  {"flows":[{"op":"read","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+GET /pap/alice!@!agile-local/prop/password 200 11.509 ms - 416
+GET /pap/some_id_for_client/prop/ 200 21.538 ms - 153
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+GET /pap/some_id_for_sensor/prop/credentials 200 2.182 ms - 416
+GET /pap/some_id_for_sensor/prop/credentials[1].system 200 1.990 ms - 175
+GET /pap/some_id_for_client/prop/credentials 200 2.162 ms - 416
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+body:  {"flows":[{"op":"read","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}}]}
+body:  {"flows":[{"op":"read"},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+GET /pap/some_id_for_sensor/prop/credentials[2].system 200 2.250 ms - 416
+body:  {"flows":[{"op":"read","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+body:  {"flows":[{"op":"read","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+body:  {"flows":[{"op":"read","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"isOwner":[{"lock":"isOwner","not":false}]}},{"op":"write","locks":{"hasType":[{"lock":"hasType","args":["/user"],"not":false}],"attrEq":[{"lock":"attrEq","args":["role","admin"],"not":false}]}}]}
+values[0]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[1]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[2]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[3]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[4]:  Policy {
+  flows: 
+   [ Flow { op: 'read', locks: [Object] },
+     Flow { op: 'write', locks: [Object] },
+     Flow { op: 'write', locks: [Object] } ] }
+values[5]:  Policy {
+  flows: 
+   [ Flow { op: 'read', locks: [Object] },
+     Flow { op: 'write', locks: [Object] },
+     Flow { op: 'write', locks: [Object] } ] }
+values[6]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[7]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[8]:  Policy {
+  flows: 
+   [ Flow { op: 'read', locks: [Object] },
+     Flow { op: 'write', locks: [Object] },
+     Flow { op: 'write', locks: [Object] } ] }
+values[9]:  Policy {
+  flows: 
+   [ Flow { op: 'read', locks: [Object] },
+     Flow { op: 'write', locks: [Object] },
+     Flow { op: 'write', locks: [Object] } ] }
+values[10]:  Policy {
+  flows: [ Flow { op: 'read' }, Flow { op: 'write', locks: [Object] } ] }
+values[11]:  Policy {
+  flows: 
+   [ Flow { op: 'read', locks: [Object] },
+     Flow { op: 'write', locks: [Object] },
+     Flow { op: 'write', locks: [Object] } ] }
+Error: default entity policy modified during creation or retrieval
+    at /home/dasch/projects/UPFROnt2/example/online/index.js:444:35
+    at tryCatcher (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/util.js:16:23)
+    at Promise._settlePromiseFromHandler (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/promise.js:512:31)
+    at Promise._settlePromise (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/promise.js:569:18)
+    at Promise._settlePromise0 (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/promise.js:614:10)
+    at Promise._settlePromises (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/promise.js:693:18)
+    at Async._drainQueue (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/async.js:133:16)
+    at Async._drainQueues (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/async.js:143:10)
+    at Immediate.Async.drainQueues (/home/dasch/projects/UPFROnt2/node_modules/bluebird/js/release/async.js:17:14)
+    at runCallback (timers.js:649:20)
+    at tryOnImmediate (timers.js:622:5)
+    at processImmediate [as _immediateCallback] (timers.js:594:5)
