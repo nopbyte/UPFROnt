@@ -90,8 +90,8 @@ function init(settings) {
                     settings.server.port,
                     settings.server.host,
                     function () {
-                        var msg = "UPFront PAP instance ("+process.pid+") is now running at "+getListenPath(settings.server);
-                        process.tite = "UPFront PAP";
+                        var msg = "UPFront instance ("+process.pid+") is now running at "+getListenPath(settings.server);
+                        process.tite = "UPFront Server";
                         if(cluster) 
                             process.send({msg: msg});
                         else {
@@ -146,15 +146,17 @@ function getListenPath(settings) {
     var listenPath = 'http' + (settings.tls ? 's' : '') + '://'+
         (settings.host == '0.0.0.0' ? '127.0.0.1' : settings.host)+
         ':'+settings.port + "/";
-
-    if(settings.path.startsWith("/"))
-        listenPath += settings.path.substring(1);
-    else
-        listenPath += settings.path;
-
-    if(!listenPath.endsWith("/"))
-        listenPath += "/";
-
+    
+    if(settings.path !== undefined && settings.path !== null) {
+        if(settings.path.startsWith("/"))
+            listenPath += settings.path.substring(1);
+        else
+            listenPath += settings.path;
+        
+        if(!listenPath.endsWith("/"))
+            listenPath += "/";
+    }
+        
     return listenPath;
 };
 
