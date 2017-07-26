@@ -1,25 +1,25 @@
 module.exports = {
+    ulocks: {
+        entityTypes : {
+            "/any"    :  0,
+            "/group"  :  1,
+            "/user"   :  2,
+            "/sensor" :  3,
+            "/client" :  4,
+            "/api"    :  5,
+            "/const"  :  6,
+            "/attr"   :  6,
+            "/prop"   :  6,
+            "/var"    :  6,
+        },
+        opTypes: {
+            "write": 0,
+            "read": 1
+        },
+        locks: "../../ulocks/Locks",
+        actions: "../../ulocks/Actions"
+    },
     pdp : {
-        ulocks: {
-            entityTypes : {
-                "/any"    :  0,
-                "/group"  :  1,
-                "/user"   :  2,
-                "/sensor" :  3,
-                "/client" :  4,
-                "/api"    :  5,
-                "/const"  :  6,
-                "/attr"   :  6,
-                "/prop"   :  6,
-                "/var"    :  6,
-            },
-            opTypes: {
-                write: 0,
-                read: 1
-            },
-            locks: "Locks/",
-            actions: "Actions"
-        }
     },
     pap: {
         // this specifies host, port and path where

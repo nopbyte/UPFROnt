@@ -74,6 +74,10 @@ upfront.init(settings)
         setting.push(pap.set(sample.entities.sensor.id, "credentials[1].system", sample.policies.defaultRole));
         setting.push(pap.set(sample.entities.sensor.id, "credentials[2].system", sample.policies.defaultRole));
 
+        setting.push(pap.set(sample.entities.sensor.id, "secret", sample.policies.defaultPasswd));
+        setting.push(pap.set(sample.entities.sensor.id, "secret2", sample.policies.defaultSecret2));
+
+
         return Promise.all(setting);
     }, function(e) {
         console.log("ERROR: Unable to retrieve all policies: " + e);
@@ -158,7 +162,7 @@ upfront.init(settings)
             console.log("Success: Read from user to admin password not granted");
 
         // ADMIN WRITES ITS PASSWORD
-        return pdp.checkWrite(sample.entities.admin, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd);
+        return pdp.checkAccess(sample.entities.admin, sample.policies.defaultActor, sample.entities.admin, sample.policies.defaultPasswd, "write");
     }, chainError).then(function(decision) {
         if(decision.grant !== true)
             return Promise.reject(new Error("ERROR: Write from admin to admin password should be allowed but is forbidden: ",decision));
@@ -193,7 +197,7 @@ upfront.init(settings)
         return pdp.checkWrite(sample.entities.user, sample.policies.defaultActor, sample.entities.user, sample.policies.defaultRole);
     }, chainError).then(function(decision) {
         if(decision.grant !== false)
-            return Promise.reject(new Error("ERROR: Write from user to user role should be forbidden but is allowed: ",decision));
+            return Promise.reject(new Error("Write from user to user role should be forbidden but is allowed: ", decision));
         else
             console.log("Success: Write from user to user role not granted");
 
@@ -215,19 +219,28 @@ upfront.init(settings)
         
         return pep.declassify(sample.entities.sensor, sample.entities.admin);
     }, chainError).then(function(filteredObject) {
-        if(filteredObject.credentials.length != 4)
+        if(filteredObject.credentials.length != 4 || !filteredObject.hasOwnProperty("secret"))
             return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
-            console.log("Success: Credentials were not filtered.");
+            console.log("Success: Credentials were not declassified.");
+
+        // DECLASSIFY SENSOR RECORD SENT TO USER
+        return pep.declassify(sample.entities.sensor, sample.entities.user);
+    }, chainError).then(function(filteredObject) {
+        if(!filteredObject.hasOwnProperty("secret2") || filteredObject.secret2 !== "CLASSIFIED")
+            return Promise.reject(new Error("ERROR: secret2 was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
+        else
+            console.log("Success: Secret2 was declassified successfully.");
 
         // DECLASSIFY SENSOR RECORD SENT TO USER
         return pep.declassify(sample.entities.sensor, sample.entities.user);
     }, chainError).then(function(filteredObject) {
         if(filteredObject.credentials.length != 3 &&
-           (filteredObject.credentials[0] !== null || filteredObject.credentials[3] !== null))
+           (filteredObject.credentials[0] !== null || filteredObject.credentials[3] !== null) ||
+           filteredObject.hasOwnProperty("secret"))
                 return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
-            console.log("Success: Credentials were filtered.");
+            console.log("Success: Credentials and secret were declassified.");
 
         return Promise.resolve();
     }, chainError).then(function() {
@@ -290,10 +303,12 @@ upfront.init(settings)
         else
             console.log("Success: Entity can only be deleted once.");
 
-        return upfront.finish();
+        return upfront.stop();
     }, chainError).catch(function(reason) {
         if(reason && reason.stack !== undefined)
             console.log(reason.stack);
         else
             console.log("ERROR: "+reason);
+
+        upfront.stop();
     });

@@ -28,7 +28,9 @@ module.exports = {
                 {"system" : "dropbox", "value": "xyzsometoken"},
                 {"system" : "github", "value": "xyzsomeothertoken"},
                 "sometoken in a mixed array"
-            ]
+            ],
+            "secret": "stuff",
+            "secret2": "more stuff"
         },
         sensor2: {
             "credentials"  : [ "sensor" ],
@@ -56,23 +58,27 @@ module.exports = {
             // all properties can only be changed by the owner of the entity
             { op: "write", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock: "isOwner" } ] }
         ]},
-        defaultPasswd : [
+        defaultPasswd : { flows: [
             // the property can only be read by the user itself
             { op: "read", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock: "isOwner" } ] },
             // the property can be set by the user itself and
             { op: "write", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock: "isOwner" } ] },
             // by all users with role admin
             { op: "write", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock : "attrEq", args : [ "role", "admin" ] } ] }
-        ],
+        ], actions: { "read": [ { action: "delete" } ] } },
+        defaultSecret2 : { flows: [
+            { op: "write", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock : "attrEq", args : [ "role", "admin" ] } ] },
+            { op: "read", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock : "attrEq", args : [ "role", "admin" ] } ] }
+        ], actions: { "read": [ { action: "replace", args: [ "fixed", "CLASSIFIED" ] } ] } },
         defaultRole : [
             // can be read by everyone 
             { op: "read" },
             // can only be changed by users with role admin
             { op: "write", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock : "attrEq", args : [ "role", "admin" ] } ] }
         ],
-        adminOnly : [
+        adminOnly : { flows: [
             { op: "write", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock : "attrEq", args : [ "role", "admin" ] } ] },
             { op: "read", locks: [ { lock: "hasType", args: [ "/user" ] }, { lock : "attrEq", args : [ "role", "admin" ] } ] }
-        ]
+        ], actions: { "read": [ { action: "delete" } ] } }
     }
 };

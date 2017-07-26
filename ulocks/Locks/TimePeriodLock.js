@@ -9,6 +9,16 @@ module.exports = function(Lock) {
         Lock.call(this, lock);
     };
 
+    TimePeriodLock.meta = {
+        arity: 2,
+        descr: "This lock is open iff the current time of the system is within the specified time interval.",
+        name: "time is in interval",
+        args: [
+            "time",
+            "time"
+        ]
+    };
+
     Lock.registerLock("inTimePeriod", TimePeriodLock);
 
     TimePeriodLock.prototype = Object.create(Lock.prototype);
@@ -87,26 +97,26 @@ module.exports = function(Lock) {
                 reject(new Error("No valid context available during evaluation of '"+self.lock+"' lock"));
 
             if(!context.isStatic) {
-                    var currentDate = new Date();
-                    var hours = currentDate.getHours();
-                    var mins = currentDate.getMinutes();
+                var currentDate = new Date();
+                var hours = currentDate.getHours();
+                var mins = currentDate.getMinutes();
 
-                    var currentTime = hours < 10 ? '0' + hours : '' + hours;
-                    currentTime += ":" + (mins < 10 ? '0' + mins : '' + mins);
+                var currentTime = hours < 10 ? '0' + hours : '' + hours;
+                currentTime += ":" + (mins < 10 ? '0' + mins : '' + mins);
 
-                    // TODO: self.args[0] should contain the time provider
-                    // we ignore it for now and take the local one
-                    if((self.args[0] <= currentTime &&
-                        self.args[1] >= currentTime && !self.not) ||
-                       ((self.args[0] > currentTime ||
-                         self.args[1] < currentTime) && self.not)) {
-                        resolve({ open: true, cond: false });
-                    } else {
-                        resolve({ open: false, cond: false, lock: self });
-		    }
+                // TODO: self.args[0] should contain the time provider
+                // we ignore it for now and take the local one
+                if((self.args[0] <= currentTime &&
+                    self.args[1] >= currentTime && !self.not) ||
+                   ((self.args[0] > currentTime ||
+                     self.args[1] < currentTime) && self.not)) {
+                    resolve({ open: true, cond: false });
                 } else {
-                    resolve({ open: true, cond: true, lock: self });
-                }
+                    resolve({ open: false, cond: false, lock: self });
+		}
+            } else {
+                resolve({ open: true, cond: true, lock: self });
+            }
         });
     }
 

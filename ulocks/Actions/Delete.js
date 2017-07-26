@@ -1,3 +1,6 @@
+var w = require('winston');
+w.level = process.env.LOG_LEVEL;
+
 module.exports = function(Action) {
     "use strict";
     
@@ -14,10 +17,10 @@ module.exports = function(Action) {
         return c;
     }
 
-    Delete.prototype.perform = function(msg) {
-        console.log("Apply delete action");
+    Delete.prototype.apply = function(msg) {
+        w.debug("Apply delete action");
 
-        return Promise.resolve({});
+        return Promise.resolve(null);
     }
     
     Delete.prototype.toString = function(args) {
