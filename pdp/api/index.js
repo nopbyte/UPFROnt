@@ -10,9 +10,8 @@ var Context = require('ULocks').Context;
 
 var pap = null;
 
-function init(settings, PAP) {
-    pap = PAP;
-    return ULocks.init(settings.ulocks);
+function init(settings, _pap) {
+    pap = _pap;
 }
 
 function finish() {
@@ -41,15 +40,42 @@ function checkArgs(subject, subjectPolicy, object, objectPolicy, method) {
         args.object = args.subjectPolicy;
         args.property = object;
     } else if(objectPolicy === undefined || subjectPolicy === undefined)
-        return Promise.reject("ERROR: PDP.api."+method+": Subject policy and/or object policy are invalid");
+        return Promise.reject(new Error("PDP.api."+method+": Subject policy and/or object policy are invalid"));
     
     if(!args.subject || args.subject.id === undefined)
-        return Promise.reject("ERROR: PDP.api."+method+": Subject does not specify identifier!");
+        return Promise.reject(new Error("PDP.api."+method+": Subject does not specify identifier!"));
     if(!args.object || args.object.id === undefined)
-        return Promise.reject("ERROR: PDP.api."+method+": Object does not specify identifier!");
+        return Promise.reject(new Error("PDP.api."+method+": Object does not specify identifier!"));
 
     return Promise.resolve(args);
 };
+
+function checkAccess(subject, subjectPolicy, object, objectPolicy, operation) {
+    w.debug("UPFROnt.pdp.api.checkAccess");
+
+    return new Promise(function(resolve, reject) {
+        if(pap === null)
+            reject(new Error("PDP.api.checkAccess: PAP is not available. Init PDP before using it."));
+        else {
+            checkArgs(subject, subjectPolicy, object, objectPolicy, "checkAccess").then(function(args) {
+                if(!args.withPo)
+                    checkAccessWoPo(args.subject, args.object, args.property, operation).then(function(r) {
+                        resolve(r);
+                    }, function(e) {
+                        reject(e);
+                    });
+                else
+                    checkAccessWithPo(args.subject, args.subjectPolicy, args.object, args.objectPolicy, operation).then(function(r) {
+                        resolve(r);
+                    }, function(e) {
+                        reject(e);
+                    });
+            }, function(e) {
+                reject(e);
+            });
+        }
+    });
+}
 
 function checkRead(subject, subjectPolicy, object, objectPolicy) {
     w.debug("UPFROnt.pdp.api.checkRead");
@@ -80,7 +106,7 @@ function checkRead(subject, subjectPolicy, object, objectPolicy) {
 
 function checkWrite(subject, subjectPolicy, object, objectPolicy) {
     if(pap === null)
-        return Promise.reject("ERROR: PDP.api.checkWrite: PAP is not available. Init PDP before using it.");
+        return Promise.reject(new Error("PDP.api.checkWrite: PAP is not available. Init PDP before using it."));
     else {
         return new Promise(function(resolve, reject) {
             checkArgs(subject, subjectPolicy, object, objectPolicy, "checkWrite").then(function(args) {
@@ -95,6 +121,33 @@ function checkWrite(subject, subjectPolicy, object, objectPolicy) {
             });
         });
     }
+};
+
+function checkAccessWoPo(subject, object, property, operation) {
+    w.debug("UPFROnt.pdp.api.checkAccessWoPo("+JSON.stringify(subject)+", "+JSON.stringify(object)+", "+JSON.stringify(property)+", "+operation+")");
+    return new Promise(function(resolve, reject) {
+        // fetch policyobjects for subject and object
+        pap.get(subject.id).then(function(sp) {
+            pap.get(object.id, property).then(function(op) {
+                if(sp && op) {
+                    w.debug("UPFROnt.pdp.api.checkAccessWoPo: Got policies for subject and object!");
+                    checkReadWithPo(subject, sp, object, op, operation).then(function(r) {
+                        resolve(r);
+                    }, function(e) {
+                        reject(e);
+                    });
+                } else {
+                    w.debug("UPFROnt.pdp.api.checkAccessWoPo: Unable to retrieve policies for subject or object!");
+                    resolve({ grant: false, cond: false });
+                }
+            }, function(e) {
+                reject(new Error("UPFROnt.pdp.api.checkAccess: Unable to retrieve policy for object entity"));
+            })
+        }, function(e) {
+            w.debug("UPFROnt.pdp.api.checkAccessWoPo: Unable to retrieve policy for subject entity: "+e);
+            reject(new Error("PDP.api.checkAccess: Unable to retrieve policy for subject entity: "+e));
+        });
+    });
 };
 
 function checkReadWoPo(subject, object, property) {
@@ -140,13 +193,49 @@ function checkWriteWoPo(subject, object, property) {
                     resolve({ grant: false, cond: false });
                 }
             }, function(e) {
-                reject("ERROR: PDP.api.checkRead: Unable to retrieve policy for object entity");
+                reject("ERROR: PDP.api.checkWrite: Unable to retrieve policy for object entity");
             })
         }, function(e) {
-            reject("ERROR: PDP.api.checkRead: Unable to retrieve policy for subject entity: "+e);
+            reject("ERROR: PDP.api.checkWrite: Unable to retrieve policy for subject entity: "+e);
         });
     });
 };
+
+function checkAccessWithPo(subject, subjectPolicy, object, objectPolicy, operation) {
+    w.debug("UPFROnt.pdp.checkAccessWithPo");
+    try {
+        if(!(subjectPolicy instanceof Policy))
+            subjectPolicy = new Policy(subjectPolicy);
+
+        if(!(objectPolicy instanceof Policy))
+            objectPolicy = new Policy(objectPolicy);
+    }
+    catch(e) {
+        return Promise.reject(e);
+    }
+
+    // TODO: check whether this type exists in Entity
+    if(!valid(subject) || !valid(subject.type))
+        return Promise.reject(new Error("Subject must specify a valid Entity type."));
+    
+    if(!valid(object) || !valid(object.type))
+        return Promise.reject(new Error("Object must specify a valid Entity type."));
+    
+    var subjectInfo = {
+        type : subject.type,
+        data : subject
+    }
+
+    var objectInfo = {
+        type : object.type,
+        data : object
+    }
+    
+    var context = new Context(subjectInfo, objectInfo);
+    console.log("operation: ", operation);
+    return objectPolicy.checkAccess(subjectPolicy, operation, context);
+};
+
 
 function checkReadWithPo(subject, subjectPolicy, object, objectPolicy) {
     w.debug("UPFROnt.pdp.checkReadWithPo");
@@ -222,5 +311,6 @@ module.exports = {
     init: init,
     finish: finish,
     checkRead: checkRead,
-    checkWrite: checkWrite
+    checkWrite: checkWrite,
+    checkAccess: checkAccess
 }
