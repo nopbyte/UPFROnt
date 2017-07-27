@@ -8,7 +8,7 @@ var Promise = require("bluebird");
 var Storage = require('./storage');
 
 var api = require('./api');
-var app = require('./app.js');
+var app = require('./app');
 
 var initialized = false;
 
