@@ -1,4 +1,5 @@
-# UPFROnt - ULock Policy FRamewOrk [![Build Status](https://travis-ci.org/SEDARI/UPFROnt.svg?branch=master)](https://travis-ci.org/SEDARI/UPFROnt)
+[![Build Status](https://travis-ci.org/SEDARI/UPFROnt.svg?branch=master)](https://travis-ci.org/SEDARI/UPFROnt) [![Dependency Status](https://david-dm.org/SEDARI/UPFROnt.svg)](https://david-dm.org/SEDARI/UPFROnt)
+# UPFROnt - ULock Policy FRamewOrk 
 
 ## Installation
 
