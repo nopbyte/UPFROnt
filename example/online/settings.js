@@ -9,7 +9,7 @@ module.exports = {
         port: 1234,
         path: "/pap/",
         tls: false,
-        cluster: 1,
+        cluster: 4,
         sync: {
             type: "redis",
             channel: "policyUpdates"

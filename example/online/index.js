@@ -618,4 +618,6 @@ upfront.init(settings)
             console.log(reason.stack);
         else
             console.log("ERROR: "+reason);
+
+        upfront.stop();
     });
