@@ -116,6 +116,16 @@ function init(settings) {
                         }, Promise.reject);
                     }
                 });
+            }, function(err) {
+                console.log("Unable to start server. API Initialization failed.");
+                console.log(err);
+                api.stop();
+                if(server !== null)
+                    server.close(function() {
+                        process.send({ killme: "Problem initializing API" });
+                    });
+                else
+                    process.send({ killme: "Problem initializing API" });
             });
         }
     });
