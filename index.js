@@ -6,7 +6,9 @@ var server = require('./server');
 var runsServer = false;
 
 function init(settings) {
-    if(settings.server !== undefined) {
+    if(settings === undefined || settings === null)
+        return Promise.reject(new Error("Invalid settings prevent UPFROnt initialization."));
+    else if(settings.server !== undefined) {
         runsServer = true;
         return server.init(settings);
     } else
