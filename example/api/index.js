@@ -16,6 +16,10 @@ function chainError(e) {
     return Promise.reject(e);
 }
 
+var defaultRead = { flows: [ { op: "read" } ] };
+var defaultWrite = { flows: [ { op: "write" } ] };
+
+
 upfront.init(settings)
     .then(function() {
         var creation = [];
@@ -77,6 +81,8 @@ upfront.init(settings)
         setting.push(pap.set(sample.entities.sensor.id, "secret", sample.policies.defaultPasswd));
         setting.push(pap.set(sample.entities.sensor.id, "secret2", sample.policies.defaultSecret2));
 
+        setting.push(pap.set(sample.entities.sensor.id, "policies", defaultRead));
+        setting.push(pap.set(sample.entities.sensor.id, "policies.policies.policies", defaultWrite));
 
         return Promise.all(setting);
     }, function(e) {
@@ -84,8 +90,8 @@ upfront.init(settings)
         return Promise.reject(e);
     })
     .then(function(v) {
-        // for(var i = 0; i < 12; i++)
-        // console.log("values["+i+"]: ", v[i]);
+        /*for(var i = 0; i < 16; i++)
+            console.log("values["+i+"]: " + JSON.stringify(v[i]));*/
         
         var retrieve = [];
         retrieve.push(pap.get(sample.entities.user.id, ""));
@@ -105,11 +111,15 @@ upfront.init(settings)
         
         retrieve.push(pap.get(sample.entities.sensor.id, "credentials[1].system"));
         retrieve.push(pap.get(sample.entities.sensor.id, "credentials[2].system"));
+
+        retrieve.push(pap.get(sample.entities.sensor.id, "policies"));
+        retrieve.push(pap.get(sample.entities.sensor.id, "policies.policies"));
+        retrieve.push(pap.get(sample.entities.sensor.id, "policies.policies.policies"));
         
         return Promise.all(retrieve);
     }, chainError).then(function(values) {
-        // for(var i = 0; i < 12; i++)
-        // console.log("values["+i+"]: ", values[i]);
+        // for(var i = 0; i < 15; i++)
+        //    console.log("values["+i+"]: ", values[i]);
             
         if(!values[0].eq(sample.policies.defaultEntity) ||
            !values[1].eq(sample.policies.defaultEntity) ||
@@ -133,6 +143,11 @@ upfront.init(settings)
         if(!values[10].eq(sample.policies.defaultRole) ||
            !values[11].eq(sample.policies.defaultRole))
             return Promise.reject(new Error("default entity policy modified during creation or retrieval"));
+
+        if(!values[12].eq(defaultRead) ||
+           !values[13].eq(defaultRead) ||
+           !values[14].eq(defaultWrite))
+            return Promise.reject(new Error("did not set policy for repeating pattern correctly"));
 
         // console.log("storing and retrieval works, testing policy decisions now");
         

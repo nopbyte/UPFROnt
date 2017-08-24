@@ -109,15 +109,13 @@ function _getProperty(policyObject, _property) {
                 var n = attrNames.shift();
                 if(curObj.properties.hasOwnProperty(n)) {
                     curObj = curObj.properties[n];
-                    effPolicy = curObj.self;
+                    if(curObj.self !== null)
+                        effPolicy = curObj.self;
                 } else
                     return effPolicy;
             }
-            
-            if(curObj.self === null)
-                return effPolicy;
-            else
-                return curObj.self;
+
+            return effPolicy;
         }
     } else
         return null;
