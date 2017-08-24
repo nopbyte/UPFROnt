@@ -1,6 +1,6 @@
 var request = require('request');
 var bunyan = require('bunyan');
-var ulocks = require('ULocks');
+var ulocks = require('ulocks');
 var Policy = ulocks.Policy;
 
 var log = bunyan.createLogger({name: "online", level: "debug"});
