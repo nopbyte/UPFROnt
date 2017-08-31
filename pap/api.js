@@ -26,19 +26,19 @@ function stop() {
     return Promise.resolve();
 }
 
-function get(id, property) {
+function get(id, property, meta) {
     if(storage === null)
         return Promise.reject(new Error("PAP API has not been initialized before use."));
     if(id === undefined)
         return Promise.reject(new Error("PAP api.get(...): Missing valid identifier to call get."));
 
     if(property === undefined)
-        return getEntity(id);
+        return getEntity(id, meta);
     else
-        return getProperty(id, property);
+        return getProperty(id, property, meta);
 };
 
-function set(id, property, policy) {    
+function set(id, property, policy, meta) {    
     if(storage === null)
         return Promise.reject(new Error("PAP API has not been initialized before use."));
     else if(id === undefined)
@@ -49,26 +49,26 @@ function set(id, property, policy) {
         return Promise.reject(new Error("PAP api.set(...): Property in set must be a string."));
 
     if(property !== undefined && policy === undefined)
-        return setEntity(id, property);
+        return setEntity(id, property, meta);
     else
-        return setProperty(id, property, policy);
+        return setProperty(id, property, policy, meta);
 };
 
-function del(id, property) {
+function del(id, property, meta) {
     if(storage === null)
         return Promise.reject(new Error("PAP API has not been initialized before use."));
     else if(id === undefined)
         return Promise.reject(new Error("Storage.del(...): Missing valid identifier to call del."));
     else {
         if(property === undefined)
-            return delEntity(id)
+            return delEntity(id, meta)
         else
-            return delProperty(id, property);
+            return delProperty(id, property, meta);
     }
 };
 
 // TODO: Check for errors during policy creation
-function getProperty(id, property) {
+function getProperty(id, property, meta) {
     w.debug("PAP.api.getProperty("+id+", '" + property+"')");
     
     return new Promise(function(resolve, reject) {
@@ -76,7 +76,7 @@ function getProperty(id, property) {
             if(entry) {
                 w.info("PAP: Retrieved policy object for id '"+id+"': ", entry);
                 var pO = entry.pO;
-                var propPolicy = _getProperty(pO, property)
+                var propPolicy = _getProperty(pO, property, meta)
                 w.info("PAP: Retrieved policy for property '"+property+"': ", propPolicy);
                 if(propPolicy !== null) {
                     resolve(new Policy(propPolicy));
@@ -91,7 +91,7 @@ function getProperty(id, property) {
     });
 };
 
-function _getProperty(policyObject, _property) {
+function _getProperty(policyObject, _property, meta) {
     w.debug("PAP.api._getProperty("+JSON.stringify(policyObject)+", '" + _property+"')");
     
     if(policyObject) {
