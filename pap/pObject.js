@@ -9,6 +9,8 @@ w.level = process.env.LOG_LEVEL;
 var emptyObject = {
     /* The policy for the object itself */
     s: null,
+    /* The meta policy, i.e. policy controlling the policy */
+    m: null,
     /* All properties in this object which carry policies */
     p: {}
 };
@@ -89,18 +91,23 @@ function delDictionaryRef(dict, ref) {
  * @function
  * @param {string} property - The path to the property for which the policy should be deleted.
  * @param {Object} policy - The object representing the policy to be set for the specified property path.
+ * @param {Boolean} meta - Decides whether the policy is the meta policy or the regular policy
  * @returns {null|Object} Returns null if the property path did not specify a policy before or the policy object replaced by the new one.
  */
-PolicyObject.prototype.setProperty = function(property, policy) {
+PolicyObject.prototype.setProperty = function(property, policy, meta) {
     var oldPolicy = null;
+    var toSet = 's';
+    
+    if(meta === true)
+        toSet = 'm'
 
     if(property === "") {
         var pRef = addDictionaryRef(this.d, policy);
-        if(this.s !== null) {
-            oldPolicy = clone(getDictionaryPolicy(this.d, this.s));
-            delDictionaryRef(this.d, curObj.s);
+        if(this[toSet] !== null) {
+            oldPolicy = clone(getDictionaryPolicy(this.d, this[toSet]));
+            delDictionaryRef(this.d, curObj[toSet]);
         }
-        this.s = pRef;
+        this[toSet] = pRef;
     } else {
         var pRef = addDictionaryRef(this.d, policy);
         var curObj = this.o;
@@ -121,11 +128,11 @@ PolicyObject.prototype.setProperty = function(property, policy) {
             }
         }
 
-        if(curObj.s !== null) {
-            oldPolicy = clone(getDictionaryPolicy(this.d, curObj.s));
-            delDictionaryRef(this.d, curObj.s);
+        if(curObj[toSet] !== null) {
+            oldPolicy = clone(getDictionaryPolicy(this.d, curObj[toSet]));
+            delDictionaryRef(this.d, curObj[toSet]);
         }
-        curObj.s = pRef;
+        curObj[toSet] = pRef;
     }
 
     return oldPolicy;
@@ -135,12 +142,16 @@ PolicyObject.prototype.setProperty = function(property, policy) {
  * @param {string} property - The path to the property for which the policy should be deleted.
  * @returns {null|Object} Returns null if the property path does not exist or the object representing the policy set which was removed from this property path.
  */
-PolicyObject.prototype.delProperty = function(property) {
+PolicyObject.prototype.delProperty = function(property, meta) {
     var oldPolicyRef = null;
+    var toSet = 's';
+
+    if(meta === true)
+        toSet = 'm';
 
     if(property === "") {
-        oldPolicyRef = this.s;
-        this.s = null;
+        oldPolicyRef = this[toSet];
+        this[toSet] = null;
     } else {
         var curObj = this.o;
         var parObj = null;
@@ -161,9 +172,9 @@ PolicyObject.prototype.delProperty = function(property) {
                 return;
         }
 
-        if(curObj.s !== null) {
-            oldPolicyRef = curObj.s;
-            curObj.s = null;
+        if(curObj[toSet] !== null) {
+            oldPolicyRef = curObj[toSet];
+            curObj[toSet] = null;
             if(parObj !== null && Object.keys(curObj.p).length === 0) {
                 delete parObj.p[n];
             }
@@ -180,11 +191,15 @@ PolicyObject.prototype.delProperty = function(property) {
  * @param {string} property - The path to the property for which a policy should be derived.
  * @returns {null|Object} Returns null if no policy was set for this property path or the object representing the policy set for this property path.
  */
-PolicyObject.prototype.getProperty = function(property) {
+PolicyObject.prototype.getProperty = function(property, meta) {
     w.info("PAP.pObject.getProperty("+JSON.stringify(this, "",2)+", '" + property+"')");
+    var toSet = 's';
+
+    if(meta === true)
+        toSet = 'm';
 
     if(property === "") {
-        return this.s;
+        return this[toSet];
     } else {
         var curObj = this.o;
 
@@ -194,21 +209,52 @@ PolicyObject.prototype.getProperty = function(property) {
             .replace(/\]$/g, "");
 
         var attrNames = p.split(".");
-        var effPolicy = curObj.s;
+        var effPolicy = curObj[toSet];
         while(attrNames.length) {
             var n = attrNames.shift();
             if(curObj.p.hasOwnProperty(n)) {
                 curObj = curObj.p[n];
-                effPolicy = curObj.s;
+                effPolicy = curObj[toSet];
             } else
                 return getDictionaryPolicy(this.d, effPolicy);
         }
 
-        if(curObj.s === null)
+        if(curObj[toSet] === null)
             return getDictionaryPolicy(this.d, effPolicy);
         else
-            return getDictionaryPolicy(this.d, curObj.s);
+            return getDictionaryPolicy(this.d, curObj[toSet]);
     }
 };
+
+/** @function
+ * @returns {Object} Returns a map of full property paths to policies.
+ */
+PolicyObject.prototype.getPPMap = function(meta, start) {
+    var toGet = 's';
+    
+    if(meta === true)
+        toGet = 'm';
+    
+    if(property === "") {
+        return this[toGet];
+    } else {
+        var curObj = this.o;
+        var effPolicy = curObj[toGet];
+        
+        for(var obj in curObject.p) {
+            var n = attrNames.shift();
+            if(curObj.p.hasOwnProperty(n)) {
+                curObj = curObj.p[n];
+                effPolicy = curObj[toGet];
+            } else
+                return getDictionaryPolicy(this.d, effPolicy);
+        }
+
+        if(curObj[toGet] === null)
+            return getDictionaryPolicy(this.d, effPolicy);
+        else
+            return getDictionaryPolicy(this.d, curObj[toGet]);
+    }
+}
 
 module.exports = PolicyObject;
