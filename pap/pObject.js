@@ -15,6 +15,10 @@ var emptyObject = {
     p: {}
 };
 
+function invalid(o) {
+    return (o === null) || (o === undefined)
+}
+
 /**
  * Constructs a new PolicyObject from another object or creates an empty PolicyObject
  * @constructor
@@ -37,49 +41,65 @@ function PolicyObject(object) {
      * @member {object} object The structure of the PolicyObject */
     this.o = clone(emptyObject);
 
-    if(object) {
-        if((object.d && !object.o) ||
-           (!object.d && object.o))
-            w.error("Cannot construct PolicyObject from invalid object");
-
-        if(object.d && object.o) {
-            this.d = object.d;
-            this.o = object.o;
+    if(!invalid(object)) {
+        if(invalid(object.d) || invalid(object.o)) {
+            w.error("Cannot construct PolicyObject from invalid object. Construct empty PolicyObject.");
+            return;
         }
-        if(object.e)
-            this.e = object.e;
+
+        this.d = clone(object.d);
+        this.o = clone(object.o);
+
+        if(!invalid(object.e))
+            this.e = clone(object.e);
     }
 };
 
 function getDictionaryPolicy(dict, ref) {
-    if(dict.hasOwnProperty(ref))
+    w.debug("getDictionaryPolicy("+dict+", "+ref+")");
+    if(ref !== null && ref !== undefined && dict.hasOwnProperty(ref))
         return dict[ref].p;
     else
         return null;
 };
 
 function addDictionaryRef(dict, policy) {
-    var max = 0;
+    var free = null;
+    var last = -1;
+
+    w.debug("addDictionaryRef("+JSON.stringify(dict)+", "+policy+")");
 
     for(var ref in dict) {
         ref = parseInt(ref);
-        if(ref >= max)
-            max = ref + 1;
+
+        // there was a gap
+        if(free === null && ref != last + 1)
+            free = last + 1;
 
         if(equal(dict[ref].p, policy)) {
             dict[ref].c++;
             return ref;
         }
+
+        last = ref;
     }
 
-    var ref = max;
+    var ref = null;
+
+    if(free === null)
+        ref = last + 1;
+    else
+        ref = free;
+
     dict[ref] = { p: policy, c: 1 };
 
     return ref;
 };
 
 function delDictionaryRef(dict, ref) {
-    if(dict.hasOwnProperty(ref)) {
+    w.debug("delDictionaryRef("+ref+")");
+    
+    if(ref !== null && ref !== undefined && dict.hasOwnProperty(ref)) {
         dict[ref].c--;
         if(dict[ref].c === 0)
             delete dict[ref];
@@ -103,11 +123,11 @@ PolicyObject.prototype.setProperty = function(property, policy, meta) {
 
     if(property === "") {
         var pRef = addDictionaryRef(this.d, policy);
-        if(this[toSet] !== null) {
-            oldPolicy = clone(getDictionaryPolicy(this.d, this[toSet]));
-            delDictionaryRef(this.d, curObj[toSet]);
+        if(this.o[toSet] !== null) {
+            oldPolicy = clone(getDictionaryPolicy(this.d, this.o[toSet]));
+            delDictionaryRef(this.d, this.o[toSet]);
         }
-        this[toSet] = pRef;
+        this.o[toSet] = pRef;
     } else {
         var pRef = addDictionaryRef(this.d, policy);
         var curObj = this.o;
@@ -144,14 +164,14 @@ PolicyObject.prototype.setProperty = function(property, policy, meta) {
  */
 PolicyObject.prototype.delProperty = function(property, meta) {
     var oldPolicyRef = null;
-    var toSet = 's';
+    var toDel = 's';
 
     if(meta === true)
-        toSet = 'm';
+        toDel = 'm';
 
     if(property === "") {
-        oldPolicyRef = this[toSet];
-        this[toSet] = null;
+        oldPolicyRef = this.o[toDel];
+        this.o[toDel] = null;
     } else {
         var curObj = this.o;
         var parObj = null;
@@ -172,9 +192,9 @@ PolicyObject.prototype.delProperty = function(property, meta) {
                 return;
         }
 
-        if(curObj[toSet] !== null) {
-            oldPolicyRef = curObj[toSet];
-            curObj[toSet] = null;
+        if(curObj[toDel] !== null) {
+            oldPolicyRef = curObj[toDel];
+            curObj[toDel] = null;
             if(parObj !== null && Object.keys(curObj.p).length === 0) {
                 delete parObj.p[n];
             }
@@ -193,13 +213,16 @@ PolicyObject.prototype.delProperty = function(property, meta) {
  */
 PolicyObject.prototype.getProperty = function(property, meta) {
     w.info("PAP.pObject.getProperty("+JSON.stringify(this, "",2)+", '" + property+"')");
-    var toSet = 's';
+    var toGet = 's';
 
     if(meta === true)
-        toSet = 'm';
+        toGet = 'm';
 
     if(property === "") {
-        return this[toSet];
+        if(this.o.s !== null)
+            return getDictionaryPolicy(this.d, this.o[toGet]);
+        else
+            return null;
     } else {
         var curObj = this.o;
 
@@ -209,22 +232,103 @@ PolicyObject.prototype.getProperty = function(property, meta) {
             .replace(/\]$/g, "");
 
         var attrNames = p.split(".");
-        var effPolicy = curObj[toSet];
+        var effPolicy = curObj[toGet];
         while(attrNames.length) {
             var n = attrNames.shift();
             if(curObj.p.hasOwnProperty(n)) {
                 curObj = curObj.p[n];
-                effPolicy = curObj[toSet];
+                if(curObj[toGet] !== null)
+                    effPolicy = curObj[toGet];
             } else
                 return getDictionaryPolicy(this.d, effPolicy);
         }
-
-        if(curObj[toSet] === null)
-            return getDictionaryPolicy(this.d, effPolicy);
-        else
-            return getDictionaryPolicy(this.d, curObj[toSet]);
+        
+        return getDictionaryPolicy(this.d, effPolicy);
     }
 };
+
+// TOOD: Integrate Meta policies for Entitylevel
+/**
+ * @public
+ * @function
+ * @param {Object} policy - The object representing the policy effective when the object is active as an entity
+ * @returns {null|Object} Returns null if the effective policy for an entity was not specified or a copy of the policy object replaced by the new one.
+ */
+PolicyObject.prototype.setEntity = function(policy) {
+    var oldPolicy = null;
+    var pRef = addDictionaryRef(this.d, policy);
+    if(this.e !== null) {
+        oldPolicy = clone(getDictionaryPolicy(this.d, this.e));
+        delDictionaryRef(this.d, this.e);
+    }
+    this.e = pRef;
+    
+    return oldPolicy;
+};
+
+/**
+ * @public
+ * @function
+ * @returns {null|Object} Returns null if the effective policy for entity actions was not specified or a copy of the policy object.
+ */
+PolicyObject.prototype.getEntity = function() {
+    if(this.e !== null) {
+        return clone(getDictionaryPolicy(this.d, this.e));
+    } else
+        return null;
+};
+
+/**
+ * @public
+ * @function
+ * @returns {null|Object} Returns null if the effective policy for an entity was not specified or a copy of the policy object originally specified for the effective policy.
+ */
+PolicyObject.prototype.delEntity = function() {
+    var oldPolicy = null;
+    if(this.e !== null) {
+        oldPolicy = clone(getDictionaryPolicy(this.d, this.e));
+        delDictionaryRef(this.d, this.e);
+    }
+    this.e = null;
+
+    return oldPolicy;
+};
+
+function getSubObject(pO, property) {
+    if(property === "")
+        return pO.o;
+    else {
+        var curObj = pO.o;
+
+        var p = property
+            .replace(/\[/, ".")
+            .replace(/\]./g, ".")
+            .replace(/\]$/g, "");
+
+        var attrNames = p.split(".");
+        while(attrNames.length) {
+            var n = attrNames.shift();
+            if(curObj.p.hasOwnProperty(n)) {
+                curObj = curObj.p[n];
+            } else
+                return null;
+        }
+        
+        return curObj;
+    }
+};
+
+PolicyObject.prototype.getSubPolicyObject = function(property) {
+    var subObject = getSubObject(this, property);
+    if(subObject !== null)
+        return new PolicyObject({
+            d : this.d,
+            e : this.e,
+            o : subObject
+        });
+    else
+        return new PolicyObject();
+}
 
 /** @function
  * @returns {Object} Returns a map of full property paths to policies.
@@ -235,25 +339,18 @@ PolicyObject.prototype.getPPMap = function(meta, start) {
     if(meta === true)
         toGet = 'm';
     
-    if(property === "") {
-        return this[toGet];
-    } else {
-        var curObj = this.o;
-        var effPolicy = curObj[toGet];
+    var curObj = this.o;
+    var effPolicy = curObj[toGet];
+    
+    for(var obj in curObject.p) {
         
-        for(var obj in curObject.p) {
-            var n = attrNames.shift();
-            if(curObj.p.hasOwnProperty(n)) {
-                curObj = curObj.p[n];
-                effPolicy = curObj[toGet];
-            } else
-                return getDictionaryPolicy(this.d, effPolicy);
-        }
-
-        if(curObj[toGet] === null)
-            return getDictionaryPolicy(this.d, effPolicy);
-        else
-            return getDictionaryPolicy(this.d, curObj[toGet]);
+        
+        /* var n = attrNames.shift();
+        if(curObj.p.hasOwnProperty(n)) {
+            curObj = curObj.p[n];
+            effPolicy = curObj[toGet];
+        } else
+            return getDictionaryPolicy(this.d, effPolicy);*/
     }
 }
 
