@@ -231,7 +231,7 @@ upfront.init(settings)
             return Promise.reject(new Error("ERROR: Write from admin to sensor name should be allowed but is forbidden: " + JSON.stringify(decision)));
         else
             console.log("Success: Write from admin to sensor name granted");
-        
+
         return pep.declassify(sample.entities.sensor, sample.entities.admin);
     }, chainError).then(function(filteredObject) {
         if(filteredObject.credentials.length != 4 || !filteredObject.hasOwnProperty("secret"))
@@ -249,7 +249,7 @@ upfront.init(settings)
 
         // DECLASSIFY SENSOR RECORD SENT TO USER
         return pep.declassify(sample.entities.sensor, sample.entities.user);
-    }, chainError).then(function(filteredObject) {
+    }, chainError).then(function(filteredObject) {       
         if(filteredObject.credentials.length != 3 &&
            (filteredObject.credentials[0] !== null || filteredObject.credentials[3] !== null) ||
            filteredObject.hasOwnProperty("secret"))
@@ -287,17 +287,20 @@ upfront.init(settings)
         for(var d in values)
             if(!values[d])
                 return Promise.reject(new Error("ERROR: Property policy deletion was not successful: "+JSON.stringify(values[d])));
-        
+        return pap.getAllProperties(sample.entities.sensor.id);
+    }, chainError).then(function(map) {
+        if(map['credentials'] !== null || Object.keys(map).length !== 10)
+            return Promise.reject(new Error("ERROR: Deletion did not reset credential policies, destroyed PAP structure or getAllProperties did not work correctly.")); 
         return pap.getFullRecord(sample.entities.sensor.id);
     }, chainError).then(function(r) {
-        if(r.self === undefined || r.self === undefined || r.self !== null ||
-           r.properties === undefined || r.properties.credentials === undefined ||
-           r.properties.credentials.self === undefined || r.properties.credentials.self !== null)
+        if(r.o.s === undefined || r.o.s !== null ||
+           r.o.p === undefined || r.o.p.credentials === undefined ||
+           r.o.p.credentials.s === undefined || r.o.p.credentials.s !== null)
             return Promise.reject(new Error("ERROR: Deletion did not reset policies or destroyed PAP structure"));
         else
             console.log("Success: Properties deleted successfully");
         
-           return pap.del(sample.entities.sensor.id);
+        return pap.del(sample.entities.sensor.id);
     }, chainError).then(function(del) {
         if(del === null)
             return Promise.reject(new Error("ERROR: Entity policy deletion was not successful."));
@@ -306,12 +309,19 @@ upfront.init(settings)
         
         return pap.getFullRecord(sample.entities.sensor.id);
     }, chainError).then(function(r) {
-        if(r !== null)
+        if(r.e !== null)
             return Promise.reject(new Error("ERROR: Entity policy deletion was not successful as the sensor still has a policy"));
         else
-            console.log("Success: Sensor does not have policy after deletion.");
+            console.log("Success: Sensor does not have entity policy after deletion.");
 
-        return pap.del(sample.entities.sensor.id);
+        return pap.remove(sample.entities.sensor.id);
+    }, chainError).then(function(r) {
+        if(r === null)
+            return Promise.reject(new Error("ERROR: Policy for entity is removed completely but should have existed."));
+        else
+            console.log("Success: Triggered removal of policy record.");
+
+        return pap.remove(sample.entities.sensor.id);
     }, chainError).then(function(del) {
         if(del !== null)
             return Promise.reject(new Error("ERROR: It should not be possible to delete an entity policy a second time!"));
