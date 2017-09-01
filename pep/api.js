@@ -67,7 +67,7 @@ function declassify(object, objPolicyRecord, target, targetPolicy) {
             
             return declassifyRec(clone(object), clone(object), objPolicyRecord, target, targetPolicy, effPolicy);
         } catch(e) {
-            var err = new Error("UPFROnt.pep.declassify: Unable to create Policy: " + e);
+            var err = new Error("upfront.pep.declassify: Unable to create Policy: " + e);
             w.error(err);
             return Promise.reject(err);
         }
@@ -124,34 +124,37 @@ function genDeclassifyPromise(property, object, policyObject, target, targetPoli
     });
 }
 
+// TODO: Introduce API calls which can be used by declassification (resolution of policy references, etc
 function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effPolicy) {
-    return new Promise(function(resolve, reject) {        
+    return new Promise(function(resolve, reject) {    
         var promises = [];
 
         var filtered = object instanceof Array ? [] : {};
         var curOPol = objectPolicy;
 
-        if(objectPolicy.self !== null || effPolicy === undefined)
-            effPolicy = objectPolicy.self;
+        var selfPolicy = objectPolicy.getProperty("");
+        if(selfPolicy !== null || effPolicy === undefined)
+            effPolicy = selfPolicy;
 
         for(var p in object) {
             if(object.hasOwnProperty(p)) {
                 var promise = null;
 
-                if(!(curOPol.properties && curOPol.properties.hasOwnProperty(p)) && effPolicy === null)
+                if(!(curOPol.o.p && curOPol.o.p.hasOwnProperty(p)) && effPolicy === null)
                     continue;
 
-                if(typeof object[p] === "object" && curOPol.properties && curOPol.properties.hasOwnProperty(p)) {
-                    promise = genDeclassifyPromise(p, object[p], curOPol.properties[p], target, targetPolicy, objInfo, effPolicy);
+                // TODO: replace these checks with getSubPolicyObject result
+                if(typeof object[p] === "object" && curOPol.o.p && curOPol.o.p.hasOwnProperty(p)) {                    
+                    promise = genDeclassifyPromise(p, object[p], curOPol.getSubPolicyObject(p), target, targetPolicy, objInfo, effPolicy);
                 } else {
-
                     // TODO: p is inside a loop => correct as it changes in the promise while looping
                     // translate into function call => only way to avoid the same variable scope!
 
-                    if(!curOPol.properties || !curOPol.properties.hasOwnProperty(p) || curOPol.properties[p].self === null)
+                    var propPolicy = curOPol.getProperty(p);
+                    if(propPolicy === null)
                         promise = genCheckReadPromise(p, object, target, targetPolicy, objInfo, effPolicy);
                     else 
-                        promise = genCheckReadPromise(p, object, target, targetPolicy, objInfo, curOPol.properties[p].self);
+                        promise = genCheckReadPromise(p, object, target, targetPolicy, objInfo, propPolicy);
                 }
 
                 promises.push(promise);

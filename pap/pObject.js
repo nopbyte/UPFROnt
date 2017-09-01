@@ -19,6 +19,8 @@ function invalid(o) {
     return (o === null) || (o === undefined)
 }
 
+// TODO: Add meta policy for this.e
+
 /**
  * Constructs a new PolicyObject from another object or creates an empty PolicyObject
  * @constructor
@@ -219,7 +221,7 @@ PolicyObject.prototype.getProperty = function(property, meta) {
         toGet = 'm';
 
     if(property === "") {
-        if(this.o.s !== null)
+        if(this.o[toGet] !== null)
             return getDictionaryPolicy(this.d, this.o[toGet]);
         else
             return null;
@@ -333,25 +335,42 @@ PolicyObject.prototype.getSubPolicyObject = function(property) {
 /** @function
  * @returns {Object} Returns a map of full property paths to policies.
  */
-PolicyObject.prototype.getPPMap = function(meta, start) {
+PolicyObject.prototype.getPPMap = function(meta) {
     var toGet = 's';
     
     if(meta === true)
         toGet = 'm';
-    
-    var curObj = this.o;
-    var effPolicy = curObj[toGet];
-    
-    for(var obj in curObject.p) {
-        
-        
-        /* var n = attrNames.shift();
-        if(curObj.p.hasOwnProperty(n)) {
-            curObj = curObj.p[n];
-            effPolicy = curObj[toGet];
-        } else
-            return getDictionaryPolicy(this.d, effPolicy);*/
-    }
+
+    var map = {};
+
+    var allObjs = [];
+    var curObj = this;
+    var prefix = "";
+    do {
+        var effPolicy = curObj.o[toGet];
+
+        for(var property in curObj.o.p) {
+            var subObj = curObj.getSubPolicyObject(property);
+            var propertyString = "";
+            if(prefix !== "")
+                propertyString = prefix + "." + property;
+            else
+                propertyString = property;
+
+            map[propertyString] = subObj.getProperty(property);
+            
+            if(Object.keys(subObj.o.p).length !== 0)
+                allObjs.push({ obj: subObj, prefix: propertyString });
+        }
+
+        var nextObj = allObjs.pop();
+        if(nextObj) {
+            curObj = nextObj.obj;
+            prefix = nextObj.prefix;
+        }
+    } while(nextObj);
+
+    return map;
 }
 
 module.exports = PolicyObject;

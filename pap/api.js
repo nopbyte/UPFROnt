@@ -6,25 +6,25 @@ w.level = process.env.LOG_LEVEL;
 var ulocks = require('ulocks');
 var Policy = ulocks.Policy;
 
+var PolicyObject = require("./pObject.js");
+
 var mutex = require("./mutex");
 
 var storage = null;
 var locks = {}
 
-var emptyEntry = {
-    self : null,
-    properties : {}
-}
-
 function init(settings, _storage) {
     storage = _storage;
-
     return mutex.init(settings);
 }
 
 function stop() {
     return Promise.resolve();
 }
+
+function create(id) {
+    return set(id);
+};
 
 function get(id, property, meta) {
     if(storage === null)
@@ -69,14 +69,14 @@ function del(id, property, meta) {
 
 // TODO: Check for errors during policy creation
 function getProperty(id, property, meta) {
-    w.debug("PAP.api.getProperty("+id+", '" + property+"')");
+    w.debug("pap.api.getProperty("+id+", '" + property+"')");
     
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
             if(entry) {
                 w.info("PAP: Retrieved policy object for id '"+id+"': ", entry);
-                var pO = entry.pO;
-                var propPolicy = _getProperty(pO, property, meta)
+                var pO = new PolicyObject(entry.pO);
+                var propPolicy = pO.getProperty(property, meta);
                 w.info("PAP: Retrieved policy for property '"+property+"': ", propPolicy);
                 if(propPolicy !== null) {
                     resolve(new Policy(propPolicy));
@@ -91,45 +91,38 @@ function getProperty(id, property, meta) {
     });
 };
 
-function _getProperty(policyObject, _property, meta) {
-    w.debug("PAP.api._getProperty("+JSON.stringify(policyObject)+", '" + _property+"')");
-    
-    if(policyObject) {
-        if(_property === "") {
-            return policyObject.self;
-        } else {
-            var curObj = policyObject;
-            var property = _property
-                .replace(/\[/, ".")
-                .replace(/\]./g, ".")
-                .replace(/\]$/g, "");
-            var attrNames = property.split(".");
-            var effPolicy = curObj.self;
-            while(attrNames.length) {
-                var n = attrNames.shift();
-                if(curObj.properties.hasOwnProperty(n)) {
-                    curObj = curObj.properties[n];
-                    if(curObj.self !== null)
-                        effPolicy = curObj.self;
-                } else
-                    return effPolicy;
+function getAllProperties(id) {
+    return new Promise(function(resolve, reject) {
+        storage.get(id).then(function(entry) {
+            if(entry) {
+                w.info("PAP: Retrieved policy object for id '"+id+"': ", entry);
+                var pO = new PolicyObject(entry.pO);
+                var map = pO.getPPMap();
+                for(var property in map) {
+                    var policy = map[property];
+                    if(policy !== null) {
+                        var polInstance = new Policy(policy);
+                        var actions = polInstance.getActions();
+                        map[property] = { flows: polInstance.getSimpleFlows() }
+                        if(Object.keys(actions).length > 0)
+                            map[property].actions = actions;
+                    }
+                }
+                resolve(map);
             }
-
-            return effPolicy;
-        }
-    } else
-        return null;
+        });
+    });
 };
 
-function setProperty(id, property, policy, release) {
+function setProperty(id, property, policy, meta) {
     return new Promise(function(resolve, reject) {
         mutex.lock(id).then(function() {
             storage.get(id).then(function(entry) {
                 if(entry) {
-                    var pO = entry.pO;
-                    var p = _setProperty(pO, property, policy);
-                    storage.set(id, p).then(function() {
-                        resolve(p);
+                    var pO = new PolicyObject(entry.pO);
+                    pO.setProperty(property, policy, meta);
+                    storage.set(id, pO).then(function() {
+                        resolve(pO);
                         mutex.unlock(id);
                     }, function(e) {
                         // Unable to update policy backend
@@ -149,41 +142,14 @@ function setProperty(id, property, policy, release) {
     });
 };
 
-// TODO be more error friendly: address missing, e.g. property=system[0].key but entity with id does not have this property
-// TODO: check for errors while creating policies
-function _setProperty(pol, property, policy) {
-    if(property === "") {
-        pol.self = new Policy(policy);
-    } else {
-        var curObj = pol;
-        property = property
-            .replace(/\[/, ".")
-            .replace(/\]./g, ".")
-            .replace(/\]$/g, "");
-        var attrNames = property.split(".");
-        while(attrNames.length) {
-            var n = attrNames.shift();
-            if(curObj.properties.hasOwnProperty(n)) {
-                curObj = curObj.properties[n];
-            } else {
-                curObj.properties[n] = clone(emptyEntry);
-                curObj = curObj.properties[n];
-            }
-        }
-        curObj.self = new Policy(policy);
-    }
-
-    return pol;
-};
-
-function delProperty(id, property) {
+function delProperty(id, property, meta) {
     return new Promise(function(resolve, reject) {
         mutex.lock(id).then(function() {
             storage.get(id).then(function(entry) {
                 if(entry) {
-                    var pO = entry.pO;
-                    var p = _delProperty(pO, property);
-                    storage.set(id, p).then(function(r) {
+                    var pO = new PolicyObject(entry.pO);
+                    pO.delProperty(property, meta);
+                    storage.set(id, pO).then(function(r) {
                         resolve(r);
                         mutex.unlock(id);
                     }, function(e) {
@@ -201,40 +167,17 @@ function delProperty(id, property) {
     });
 };
 
-function _delProperty(pObject, _property) {
-    if(_property === "") {
-        if(pObject.self !== null)
-            pObject.self = null;
-    } else {
-        var curObj = pObject;
-        var property = _property
-            .replace(/\[/, ".")
-            .replace(/\]./g, ".")
-            .replace(/\]$/g, "");
-        
-        var attrNames = property.split(".");
-        while(attrNames.length) {
-            var n = attrNames.shift();
-            if(curObj.properties.hasOwnProperty(n))
-                curObj = curObj.properties[n];
-            else
-                return pObject;
-        }
-        
-        if(curObj.self !== null)
-            curObj.self = null;
-    }
-    
-    return pObject;
-};  
-
 // TODO: check for errors during policy creation
 function getEntity(id) {
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
             if(entry) {
-                var pO = entry.pO;
-                resolve(new Policy(pO.entity));
+                var pO = new PolicyObject(entry.pO);
+                var p = pO.getEntity();
+                if(p !== null)
+                    resolve(new Policy(p));
+                else
+                    resolve(null);;
             } else
                 resolve(null);
         }, function(e) {
@@ -243,29 +186,27 @@ function getEntity(id) {
     });
 };
 
+// TODO: Entity semantics is somehow screwed ... need specific way to create and destroy an entry
+// (in particular destory) a policy entry completely
 function setEntity(id, policy) {
     return new Promise(function (resolve, reject) {
         mutex.lock(id).then(function() {
             storage.get(id).then(function(entry) {
                 var pO = null;
                 if(entry === null) {
-                    pO = clone(emptyEntry);
+                    pO = new PolicyObject();
                 } else {
                     if(entry.pO)
-                        pO = entry.pO;
+                        pO = new PolicyObject(entry.pO);
                     else {
-                        pO = clone(emptyEntry);
+                        pO = new PolicyObject();
                     }
                 }
-                
-                _setEntity(id, pO, policy).then(function(p) {
-                    storage.set(id, p).then(function() {
-                        resolve(p);
-                        mutex.unlock(id);
-                    }, function(e) {
-                        reject(e);
-                        mutex.unlock(id);
-                    });
+
+                pO.setEntity(policy);
+                storage.set(id, pO).then(function() {
+                    resolve(pO);
+                    mutex.unlock(id);
                 }, function(e) {
                     reject(e);
                     mutex.unlock(id);
@@ -275,24 +216,40 @@ function setEntity(id, policy) {
     });
 };
 
-// TODO: update with change of ulock system
-function _setEntity(id, pO, policy) {
+function delEntity(id) {
     return new Promise(function(resolve, reject) {
-        if(!(policy instanceof Policy))
-            try {
-                policy = new Policy(policy);
-            } catch(e) {
+        mutex.lock(id).then(function() {
+            storage.get(id).then(function(entry) {
+                if(entry) {
+                    var pO = new PolicyObject(entry.pO);
+                    pO.delEntity();
+                    storage.set(id, pO).then(function(r) {
+                        resolve(r);
+                        mutex.unlock(id);
+                    }, function(e) {
+                        w.error("PAP.api.delProperty is unable to delete property in entity with id '"+id+"'");
+                        // Unable to update policy backend
+                        reject(e);
+                        mutex.unlock(id);
+                    });
+                } else {
+                    resolve(null);
+                    mutex.unlock(id);
+                }
+            }, function(e) {
                 reject(e);
-                return;
-            }
-        
-        pO.entity = policy;
-
-        resolve(pO);
+                mutex.unlock(id);
+            });
+        });
     });
 };
 
-function delEntity(id) {
+function remove(id) {
+    if(!storage)
+        return Promise.reject(new Error("pap.api has not been initialized before use."));
+    if(id === undefined)
+        return Promise.reject(new Error("pap.api.remove(...): Missing valid identifier to call remove."));
+    
     return new Promise(function(resolve, reject) {
         mutex.lock(id).then(function() {
             storage.del(id).then(function(entry) {
@@ -311,16 +268,16 @@ function delEntity(id) {
     });
 };
 
-function getFullRecord(id) {
+function getRecord(id) {
     if(!storage)
-        return Promise.reject(new Error("PAP API has not been initialized before use."));
+        return Promise.reject("ERROR: PAP API has not been initialized before use.");
     if(id === undefined)
-        return Promise.reject(new Error("PAP api.getFullRecord(...): Missing valid identifier to call getFullRecord."));
+        return Promise.reject("ERROR: PAP api.getFullRecord(...): Missing valid identifier to call getFullRecord.");
 
     return new Promise(function(resolve, reject) {
         storage.get(id).then(function(entry) {
             if(entry) {
-                var pO = entry.pO;
+                var pO = new PolicyObject(entry.pO);
                 resolve(pO);
             } else
                 resolve(null);
@@ -336,6 +293,11 @@ module.exports = {
     get: get,
     set: set,
     del: del,
+    create: create,
+    remove: remove,
 
-    getFullRecord: getFullRecord
+    getFullRecord: getRecord,
+    getRecord: getRecord,
+
+    getAllProperties: getAllProperties
 }

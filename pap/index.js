@@ -85,6 +85,9 @@ module.exports = {
     get: api.get,
     set: api.set,
     del: api.del,
+    remove: api.remove,
+    create: api.create,
 
-    getFullRecord: api.getFullRecord
+    getFullRecord: api.getRecord,
+    getAllProperties: api.getAllProperties
 };
