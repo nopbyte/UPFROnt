@@ -22,6 +22,15 @@ var defaultWrite = { flows: [ { op: "write" } ] };
 
 upfront.init(settings)
     .then(function() {
+        var removal = [];
+        removal.push(pap.remove(sample.entities.user.id));
+        removal.push(pap.remove(sample.entities.admin.id));
+        removal.push(pap.remove(sample.entities.sensor.id));
+        removal.push(pap.remove(sample.entities.sensor2.id));
+        removal.push(pap.remove(sample.entities.client.id));
+
+        return Promise.all(removal);
+    }, chainError).then(function() {
         var creation = [];
         creation.push(pap.set(sample.entities.user.id, sample.policies.defaultActor));
         creation.push(pap.set(sample.entities.admin.id, sample.policies.defaultActor));
@@ -78,11 +87,17 @@ upfront.init(settings)
         setting.push(pap.set(sample.entities.sensor.id, "credentials[1].system", sample.policies.defaultRole));
         setting.push(pap.set(sample.entities.sensor.id, "credentials[2].system", sample.policies.defaultRole));
 
+        setting.push(pap.set(sample.entities.sensor.id, "credentials[3].system", sample.policies.defaultPasswd));
+        setting.push(pap.set(sample.entities.sensor.id, "credentials[3].value", sample.policies.defaultPasswd));
+
         setting.push(pap.set(sample.entities.sensor.id, "secret", sample.policies.defaultPasswd));
         setting.push(pap.set(sample.entities.sensor.id, "secret2", sample.policies.defaultSecret2));
 
         setting.push(pap.set(sample.entities.sensor.id, "policies", defaultRead));
         setting.push(pap.set(sample.entities.sensor.id, "policies.policies.policies", defaultWrite));
+
+
+        // ENSURE EVERYTHING IS DELETED AFTER TESTING!!!
 
         return Promise.all(setting);
     }, function(e) {
@@ -234,7 +249,7 @@ upfront.init(settings)
 
         return pep.declassify(sample.entities.sensor, sample.entities.admin);
     }, chainError).then(function(filteredObject) {
-        if(filteredObject.credentials.length != 4 || !filteredObject.hasOwnProperty("secret"))
+        if(filteredObject.credentials.length != 5 || !filteredObject.hasOwnProperty("secret"))
             return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
             console.log("Success: Credentials were not declassified.");
@@ -247,15 +262,25 @@ upfront.init(settings)
         else
             console.log("Success: Secret2 was declassified successfully.");
 
+        if(filteredObject.credentials.length != 3 ||
+           filteredObject.credentials[0] !== undefined ||
+           filteredObject.hasOwnProperty("secret"))
+            return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
+        else
+            console.log("Success: Credentials and secret were declassified.");
+
+        return pap.set(sample.entities.sensor.id, "credentials[3]", sample.policies.defaultRole);
+    }, chainError).then(function() {
         // DECLASSIFY SENSOR RECORD SENT TO USER
         return pep.declassify(sample.entities.sensor, sample.entities.user);
-    }, chainError).then(function(filteredObject) {       
-        if(filteredObject.credentials.length != 3 &&
-           (filteredObject.credentials[0] !== null || filteredObject.credentials[3] !== null) ||
+    }, chainError).then(function(filteredObject) {
+        if(filteredObject.credentials.length != 4 ||
+           filteredObject.credentials[0] !== undefined ||
+           Object.keys(filteredObject.credentials[3]).length !== 0 ||
            filteredObject.hasOwnProperty("secret"))
                 return Promise.reject(new Error("ERROR: Object was filtered incorrectly: " + JSON.stringify(filteredObject, null, 2)));
         else
-            console.log("Success: Credentials and secret were declassified.");
+            console.log("Success: Object in array was declassified correctly.");
 
         return Promise.resolve();
     }, chainError).then(function() {
@@ -289,7 +314,7 @@ upfront.init(settings)
                 return Promise.reject(new Error("ERROR: Property policy deletion was not successful: "+JSON.stringify(values[d])));
         return pap.getAllProperties(sample.entities.sensor.id);
     }, chainError).then(function(map) {
-        if(map['credentials'] !== null || Object.keys(map).length !== 10)
+        if(map['credentials'] !== null || Object.keys(map).length !== 13)
             return Promise.reject(new Error("ERROR: Deletion did not reset credential policies, destroyed PAP structure or getAllProperties did not work correctly.")); 
         return pap.getFullRecord(sample.entities.sensor.id);
     }, chainError).then(function(r) {
@@ -327,6 +352,8 @@ upfront.init(settings)
             return Promise.reject(new Error("ERROR: It should not be possible to delete an entity policy a second time!"));
         else
             console.log("Success: Entity can only be deleted once.");
+
+    }, chainError).then(function() {
 
         return upfront.stop();
     }, chainError).catch(function(reason) {

@@ -25,8 +25,9 @@ module.exports = {
             "owner" : "bob!@!agile-local",
             "credentials" : [
                 "start token",
-                {"system" : "dropbox", "value": "xyzsometoken"},
-                {"system" : "github", "value": "xyzsomeothertoken"},
+                {"system": "dropbox", "value": "xyzsometoken" },
+                {"system": "github", "value": "xyzsomeothertoken" },
+                {"system": "google", "value": "andanothertoken" },
                 "sometoken in a mixed array"
             ],
             "secret": "stuff",
