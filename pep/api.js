@@ -113,8 +113,8 @@ function genCheckReadPromise(property, object, target, targetPolicy, objInfo, ef
 function genDeclassifyPromise(property, object, policyObject, target, targetPolicy, objInfo, effPolicy) {
     return new Promise(function(resolve, reject) {
         declassifyRec(objInfo, object, policyObject, target, targetPolicy, effPolicy).then(function(o) {
-            if(Object.keys(o).length > 0)
-                resolve({ prop: property, value: o});
+            if(o !== null)
+                resolve({ prop: property, value: o })
             else
                 resolve({ prop: property });
         }, function(e) {
@@ -144,8 +144,12 @@ function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effP
                     continue;
 
                 // TODO: replace these checks with getSubPolicyObject result
-                if(typeof object[p] === "object" && curOPol.o.p && curOPol.o.p.hasOwnProperty(p)) {                    
-                    promise = genDeclassifyPromise(p, object[p], curOPol.getSubPolicyObject(p), target, targetPolicy, objInfo, effPolicy);
+                if(typeof object[p] === "object" && curOPol.o.p && curOPol.o.p.hasOwnProperty(p)) {
+                    var propPolicy = curOPol.getProperty(p);
+                    if(propPolicy === null)
+                        promise = genDeclassifyPromise(p, object[p], curOPol.getSubPolicyObject(p), target, targetPolicy, objInfo, effPolicy);
+                    else
+                        promise = genDeclassifyPromise(p, object[p], curOPol.getSubPolicyObject(p), target, targetPolicy, objInfo, propPolicy);
                 } else {
                     // TODO: p is inside a loop => correct as it changes in the promise while looping
                     // translate into function call => only way to avoid the same variable scope!
@@ -161,20 +165,39 @@ function declassifyRec(objInfo, object, objectPolicy, target, targetPolicy, effP
             }
         }
 
-        if(promises.length === 0)
-            return resolve(clone(object));
-        else {
-            
-            Promise.all(promises).then(function(values) {
-                for(var i in values) {
-                    if(values[i].value !== undefined)
-                        filtered[values[i].prop] = values[i].value;
-                }
-                resolve(filtered);
-            }, function(reason) {              
-                reject(reason);
-            });
-        }
+        var promise = null;
+        if(effPolicy !== null)
+            promise = pdp.checkRead(target, targetPolicy, objInfo, effPolicy)
+        else
+            promise = Promise.resolve({ grant: true });
+
+        promise.then(function(result) {
+            if(promises.length === 0) {
+                if(result.grant)
+                    resolve(clone(object));
+                else
+                    resolve(null);
+            } else {
+                Promise.all(promises).then(function(values) {
+                    for(var i in values) {
+                        if(values[i].value !== undefined)
+                            filtered[values[i].prop] = values[i].value;
+                    }
+                    if(Object.keys(filtered).length > 0)
+                        resolve(filtered);
+                    else {
+                        if(result.grant)
+                            resolve({})
+                        else
+                            resolve(null);
+                    }
+                }, function(reason) {
+                    reject(reason);
+                });
+            }
+        }, function(e) {
+            reject(e);
+        });
     });
 };
 
