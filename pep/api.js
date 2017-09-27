@@ -5,6 +5,7 @@ w.level = process.env.LOG_LEVEL;
 var pap = require('../pap');
 var pdp = require('../pdp');
 var Policy = require('ulocks').Policy;
+var PolicyObject = require('../pap/pObject');
 
 function isValid(o) {
     return (o !== undefined && o !== null)
@@ -46,7 +47,7 @@ function declassify(object, objPolicyRecord, target, targetPolicy) {
     if(!isValid(object))
         return Promise.reject(new Error("Unable to declassify invalid object"));
     
-    if(!isValid(object))
+    if(!isValid(objPolicyRecord))
         return Promise.reject(new Error("Invalid object policy record during call to PEP.declassify"));
 
     if((isValid(target) || isValid(targetPolicy)) && (!isValid(target) || !isValid(targetPolicy)))
@@ -62,6 +63,9 @@ function declassify(object, objPolicyRecord, target, targetPolicy) {
 
     if(targetPolicy) {
         try {
+            if(!(objPolicyRecord instanceof PolicyObject))
+                objPolicyRecord = new PolicyObject(objPolicyRecord);
+
             if(!(targetPolicy instanceof Policy))
                 targetPolicy = new Policy(targetPolicy);
             
